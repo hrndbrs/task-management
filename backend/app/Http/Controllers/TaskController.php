@@ -9,22 +9,24 @@ use App\Http\Resources\TaskResource;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssigned;
+use App\Services\TaskListCache;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class TaskController extends Controller
 {
-    public function index(ListTasksRequest $request): AnonymousResourceCollection
+    public function index(ListTasksRequest $request, TaskListCache $cache): JsonResponse
     {
-        $tasks = Task::query()
-            ->with(['assignedUser', 'creator'])
-            ->filtered($request->validated())
-            ->paginate($request->integer('per_page', 15));
+        $query = [...$request->validated(), 'page' => $request->integer('page', 1)];
 
-        return TaskResource::collection($tasks);
+        return response()->json($cache->remember($request->user(), $query, fn () => TaskResource::collection(
+            Task::query()
+                ->with(['assignedUser', 'creator'])
+                ->filtered($request->validated())
+                ->paginate($request->integer('per_page', 15)),
+        )->response()->getData(true)));
     }
 
     public function store(StoreTaskRequest $request): JsonResponse
