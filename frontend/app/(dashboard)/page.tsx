@@ -59,7 +59,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           )}
         </div>
       ) : (
-        <ul className="divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+        <ul aria-label="Tasks" className="divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
           {tasks.map((task) => (
             <li key={task.id}>
               <Link

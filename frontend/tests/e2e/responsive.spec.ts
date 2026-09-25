@@ -17,7 +17,7 @@ for (const path of ["/", "/tasks/new", "/tasks/1"]) {
 test("stacks task details under the title on a phone", async ({ page }) => {
   await page.goto("/");
 
-  const row = page.getByRole("list").getByRole("link").first();
+  const row = page.getByRole("list", { name: "Tasks" }).getByRole("link").first();
   const title = await row.locator("span").first().boundingBox();
   const status = await row.locator("span").nth(1).boundingBox();
 

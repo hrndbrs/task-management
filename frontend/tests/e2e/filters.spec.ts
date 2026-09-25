@@ -20,7 +20,7 @@ test("searches, filters and sorts the task list through the URL", async ({ page 
   const tag = `filter${Date.now()}`;
   const urgent = await createTask(page, `${tag} alpha`, "urgent");
   const low = await createTask(page, `${tag} beta`, "low");
-  const tasks = page.getByRole("list").first();
+  const tasks = page.getByRole("list", { name: "Tasks" });
 
   try {
     await page.goto("/");
