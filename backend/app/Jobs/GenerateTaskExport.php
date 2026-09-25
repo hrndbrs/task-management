@@ -19,7 +19,7 @@ class GenerateTaskExport implements ShouldQueue
 
     public int $tries = 2;
 
-    // Must stay below the queue connection's retry_after (90s).
+    // Must stay below the queue connection's retry_after (900s).
     public int $timeout = 75;
 
     public bool $deleteWhenMissingModels = true;
