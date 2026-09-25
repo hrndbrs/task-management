@@ -2,7 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { type TaskFilters, filterParams, parseTaskFilters } from "@/lib/task-filters";
-import type { Paginated, Task, User } from "@/lib/types";
+import type { Comment, Paginated, Task, User } from "@/lib/types";
 
 async function getJson<T>(path: string): Promise<T | null> {
   const res = await apiFetch(path);
@@ -31,4 +31,8 @@ export const getTask = cache(async (id: number): Promise<Task | null> => {
 
 export async function getUsers(): Promise<User[]> {
   return (await getJson<{ data: User[] }>("/users"))!.data;
+}
+
+export async function getComments(taskId: number): Promise<Comment[]> {
+  return (await getJson<{ data: Comment[] }>(`/tasks/${taskId}/comments`))?.data ?? [];
 }

@@ -41,6 +41,14 @@ export type Attachment = {
   thumbnail_url: string | null;
 };
 
+export type Comment = {
+  id: number;
+  task_id: number;
+  comment: string;
+  user: User;
+  created_at: string;
+};
+
 export type Paginated<T> = {
   data: T[];
   meta: {
