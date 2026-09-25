@@ -181,6 +181,7 @@ CREATE TABLE `task_comments` (
   PRIMARY KEY (`id`),
   KEY `task_comments_task_id_foreign` (`task_id`),
   KEY `task_comments_user_id_foreign` (`user_id`),
+  KEY `task_comments_task_id_created_at_index` (`task_id`,`created_at`),
   CONSTRAINT `task_comments_task_id_foreign` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
   CONSTRAINT `task_comments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -201,6 +202,9 @@ CREATE TABLE `tasks` (
   PRIMARY KEY (`id`),
   KEY `tasks_assigned_user_id_foreign` (`assigned_user_id`),
   KEY `tasks_created_by_foreign` (`created_by`),
+  KEY `tasks_created_at_index` (`created_at`),
+  KEY `tasks_status_created_at_index` (`status`,`created_at`),
+  KEY `tasks_assigned_user_id_created_at_index` (`assigned_user_id`,`created_at`),
   KEY `tasks_status_priority_index` (`status`,`priority`),
   KEY `tasks_due_date_index` (`due_date`),
   CONSTRAINT `tasks_assigned_user_id_foreign` FOREIGN KEY (`assigned_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,

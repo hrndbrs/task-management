@@ -164,12 +164,12 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `batch` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `migrations` WRITE;
 /*!40000 ALTER TABLE `migrations` DISABLE KEYS */;
-INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_users_table',1),(2,'0001_01_01_000001_create_cache_table',1),(3,'0001_01_01_000002_create_jobs_table',1),(4,'2026_09_25_131532_add_role_to_users_table',1),(5,'2026_09_25_131533_create_tasks_table',1),(6,'2026_09_25_131534_create_task_attachments_table',1),(7,'2026_09_25_131535_create_task_comments_table',1),(8,'2026_09_25_150947_add_thumbnail_path_to_task_attachments_table',1),(9,'2026_09_25_151735_create_chunked_uploads_table',1),(10,'2026_09_25_152438_add_scan_status_to_task_attachments_table',1),(11,'2026_09_25_153243_add_versioning_to_task_attachments_table',1),(12,'2026_09_25_153244_add_version_group_to_chunked_uploads_table',1),(13,'2026_09_25_154943_create_exports_table',1),(14,'2026_09_25_201051_add_streaming_to_task_attachments_table',1);
+INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_users_table',1),(2,'0001_01_01_000001_create_cache_table',1),(3,'0001_01_01_000002_create_jobs_table',1),(4,'2026_09_25_131532_add_role_to_users_table',1),(5,'2026_09_25_131533_create_tasks_table',1),(6,'2026_09_25_131534_create_task_attachments_table',1),(7,'2026_09_25_131535_create_task_comments_table',1),(8,'2026_09_25_150947_add_thumbnail_path_to_task_attachments_table',1),(9,'2026_09_25_151735_create_chunked_uploads_table',1),(10,'2026_09_25_152438_add_scan_status_to_task_attachments_table',1),(11,'2026_09_25_153243_add_versioning_to_task_attachments_table',1),(12,'2026_09_25_153244_add_version_group_to_chunked_uploads_table',1),(13,'2026_09_25_154943_create_exports_table',1),(14,'2026_09_25_201051_add_streaming_to_task_attachments_table',1),(15,'2026_09_25_210517_add_list_indexes_to_tasks_and_task_comments',2);
 /*!40000 ALTER TABLE `migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `password_reset_tokens`;
@@ -250,6 +250,7 @@ CREATE TABLE `task_comments` (
   PRIMARY KEY (`id`),
   KEY `task_comments_task_id_foreign` (`task_id`),
   KEY `task_comments_user_id_foreign` (`user_id`),
+  KEY `task_comments_task_id_created_at_index` (`task_id`,`created_at`),
   CONSTRAINT `task_comments_task_id_foreign` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
   CONSTRAINT `task_comments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -279,6 +280,9 @@ CREATE TABLE `tasks` (
   KEY `tasks_created_by_foreign` (`created_by`),
   KEY `tasks_status_priority_index` (`status`,`priority`),
   KEY `tasks_due_date_index` (`due_date`),
+  KEY `tasks_created_at_index` (`created_at`),
+  KEY `tasks_status_created_at_index` (`status`,`created_at`),
+  KEY `tasks_assigned_user_id_created_at_index` (`assigned_user_id`,`created_at`),
   CONSTRAINT `tasks_assigned_user_id_foreign` FOREIGN KEY (`assigned_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `tasks_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
