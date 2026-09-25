@@ -408,7 +408,8 @@ paths:
         chunked upload endpoints. The file type is checked from its content, not only its name.
 
         The new attachment starts with `scan_status: pending`. A queued virus scan then marks it
-        `clean` (and queues a thumbnail for images) or `infected` (and deletes the file).
+        `clean` (and queues a thumbnail for images, or a poster thumbnail and HLS stream for videos)
+        or `infected` (and deletes the file).
       parameters:
         - $ref: '#/components/parameters/TaskId'
       requestBody:
@@ -482,6 +483,34 @@ paths:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /attachments/{attachment}/stream/{path}:
+    get:
+      operationId: streamVideo
+      tags: [Attachments]
+      summary: Stream a video (HLS)
+      description: |
+        Videos are transcoded in the background into an HLS stream with several quality levels
+        (360p, 720p and 1080p, never above the source resolution). Once `stream_status` is `ready`,
+        point an HLS player at `master.m3u8` (the attachment's `stream_url`). The playlists use
+        relative paths, so the player requests the quality playlists and segments from this same endpoint.
+      parameters:
+        - $ref: '#/components/parameters/AttachmentId'
+        - name: path
+          in: path
+          required: true
+          description: '`master.m3u8`, `stream_{n}/index.m3u8` or `stream_{n}/seg_{nnn}.ts`. Anything else returns 404.'
+          schema: { type: string, example: master.m3u8 }
+      responses:
+        '200':
+          description: A playlist or a video segment
+          content:
+            application/vnd.apple.mpegurl:
+              schema: { type: string }
+            video/mp2t:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { description: 'Not a video, the stream is not ready yet, or no such playlist or segment' }
 
   /attachments/{attachment}:
     delete:
@@ -1043,7 +1072,13 @@ components:
         uploaded_at: { type: string, format: date-time }
         download_url: { type: string, format: uri }
         versions_url: { type: string, format: uri }
-        thumbnail_url: { type: [string, 'null'], format: uri }
+        thumbnail_url: { type: [string, 'null'], format: uri, description: 'Images, and poster frames of videos' }
+        stream_status:
+          type: [string, 'null']
+          enum: [pending, ready, failed, null]
+          description: 'Videos only: progress of the HLS stream. `null` for other files, and for videos not yet scanned.'
+        stream_url: { type: [string, 'null'], format: uri, description: 'The master playlist, once `stream_status` is `ready`' }
+        duration: { type: [number, 'null'], description: 'Video length in seconds' }
 
     ChunkedUpload:
       type: object

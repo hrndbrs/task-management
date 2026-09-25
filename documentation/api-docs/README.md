@@ -50,6 +50,7 @@ Or paste `openapi.yaml` into https://editor.swagger.io.
 | POST   | `/tasks/{id}/attachments`         | Upload a file (up to 50 MB)                                                                                 |
 | GET    | `/attachments/{id}/download`      | Download a file                                                                                             |
 | GET    | `/attachments/{id}/thumbnail`     | An image's thumbnail                                                                                        |
+| GET    | `/attachments/{id}/stream/{path}` | Stream a video: HLS playlists and segments                                                                  |
 | DELETE | `/attachments/{id}`               | Delete a file and all its versions                                                                          |
 | GET    | `/attachments/{id}/versions`      | Every version of a file                                                                                     |
 | POST   | `/attachments/{id}/versions`      | Upload a new version                                                                                        |

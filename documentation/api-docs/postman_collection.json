@@ -5,7 +5,7 @@
       "description": "Log in, log out and read the current user.",
       "item": [
         {
-          "id": "ae886a4f-824d-4375-a41c-2fbee91a9335",
+          "id": "77afd06e-b908-40b4-b31d-d3b0a2cdcf1a",
           "name": "Log in and receive a JWT",
           "request": {
             "name": "Log in and receive a JWT",
@@ -64,7 +64,7 @@
           }
         },
         {
-          "id": "5b5caa33-e9bd-471c-a9ca-54bf8384f5d4",
+          "id": "f21b1c67-7c29-42b2-8889-428b64a6c7e4",
           "name": "Get the signed-in user",
           "request": {
             "name": "Get the signed-in user",
@@ -96,7 +96,7 @@
           }
         },
         {
-          "id": "26677dab-e210-4821-a298-aa67a8d583c6",
+          "id": "e6be783d-022a-4f26-9a8a-89d3475ec545",
           "name": "Log out and invalidate the token",
           "request": {
             "name": "Log out and invalidate the token",
@@ -134,7 +134,7 @@
       "description": "People who can be assigned tasks.",
       "item": [
         {
-          "id": "8f23bb27-8b9e-467c-bc42-8c8ad5708d10",
+          "id": "8f15299b-fcbd-40cc-a9a4-4bb09025280f",
           "name": "List all users",
           "request": {
             "name": "List all users",
@@ -174,7 +174,7 @@
       "description": "Create, read, update, delete and list tasks.",
       "item": [
         {
-          "id": "32f261ee-f3f3-45d2-a248-a92308afcdf9",
+          "id": "533f0ef8-bad3-47ad-b3c9-aa039147643d",
           "name": "List tasks",
           "request": {
             "name": "List tasks",
@@ -197,7 +197,7 @@
                     "type": "text/plain"
                   },
                   "key": "status",
-                  "value": "in_progress"
+                  "value": "cancelled"
                 },
                 {
                   "disabled": true,
@@ -206,7 +206,7 @@
                     "type": "text/plain"
                   },
                   "key": "priority",
-                  "value": "medium"
+                  "value": "high"
                 },
                 {
                   "disabled": true,
@@ -290,7 +290,7 @@
           }
         },
         {
-          "id": "bf09deac-7379-40c1-9717-7cc87d5525a2",
+          "id": "0324f374-9417-4b92-a881-dc98389d5097",
           "name": "Create a task",
           "request": {
             "name": "Create a task",
@@ -321,7 +321,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"<string>\",\n  \"description\": \"<string,null>\",\n  \"status\": \"in_progress\",\n  \"priority\": \"urgent\",\n  \"assigned_user_id\": \"<integer,null>\",\n  \"due_date\": \"<string,null-date>\"\n}",
+              "raw": "{\n  \"title\": \"<string>\",\n  \"description\": \"<string,null>\",\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"assigned_user_id\": \"<integer,null>\",\n  \"due_date\": \"<string,null-date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -337,7 +337,7 @@
           }
         },
         {
-          "id": "34c640d2-df38-4611-873c-764b65cb48d0",
+          "id": "dd858364-fdbf-42e5-bb26-762f63828da2",
           "name": "Get a task with its attachments",
           "request": {
             "name": "Get a task with its attachments",
@@ -383,7 +383,7 @@
           }
         },
         {
-          "id": "a078c802-442c-4534-b4f1-7fdc543cf673",
+          "id": "8fb2d846-20a7-4f57-a581-8aaf2d32c83c",
           "name": "Update a task",
           "request": {
             "name": "Update a task",
@@ -426,7 +426,7 @@
             "method": "PUT",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"<string>\",\n  \"description\": \"<string,null>\",\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"assigned_user_id\": \"<integer,null>\",\n  \"due_date\": \"<string,null-date>\"\n}",
+              "raw": "{\n  \"title\": \"<string>\",\n  \"description\": \"<string,null>\",\n  \"status\": \"pending\",\n  \"priority\": \"low\",\n  \"assigned_user_id\": \"<integer,null>\",\n  \"due_date\": \"<string,null-date>\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -442,7 +442,7 @@
           }
         },
         {
-          "id": "fe49c227-98af-4955-a3df-50fa30698933",
+          "id": "84df9ddd-657c-44d7-9edf-a27ddebdb278",
           "name": "Delete a task",
           "request": {
             "name": "Delete a task",
@@ -494,7 +494,7 @@
       "description": "Queued status changes across many tasks.",
       "item": [
         {
-          "id": "010655f5-a837-477c-9b73-1e7c0ad50ee2",
+          "id": "fe46636b-6b2b-4a00-8d7c-f8454f38fde6",
           "name": "Change the status of many tasks in the background",
           "request": {
             "name": "Change the status of many tasks in the background",
@@ -526,7 +526,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"task_ids\": [\n    \"<integer>\"\n  ],\n  \"status\": \"in_progress\"\n}",
+              "raw": "{\n  \"task_ids\": [\n    \"<integer>\"\n  ],\n  \"status\": \"cancelled\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -542,7 +542,7 @@
           }
         },
         {
-          "id": "d56027da-a6c3-4795-b338-2032d0447021",
+          "id": "214bc9f9-b232-4372-a659-004f970d2dda",
           "name": "Check a bulk status update",
           "request": {
             "name": "Check a bulk status update",
@@ -595,7 +595,7 @@
       "description": "Discussion on a task, broadcast live.",
       "item": [
         {
-          "id": "45548b83-5311-49b4-9424-f86702c56369",
+          "id": "853fdc6c-7d1c-4014-a101-fc3a504c5c6c",
           "name": "List a task's comments",
           "request": {
             "name": "List a task's comments",
@@ -642,7 +642,7 @@
           }
         },
         {
-          "id": "900eeca1-17cb-4650-a075-862ebd7eda44",
+          "id": "4fa9d520-57fb-4fca-9cdc-5caebce7f728",
           "name": "Comment on a task",
           "request": {
             "name": "Comment on a task",
@@ -702,7 +702,7 @@
           }
         },
         {
-          "id": "444ad041-9194-483b-8422-0a89fc3c509c",
+          "id": "f375859e-cf04-4daf-83a2-13bd2457bdd4",
           "name": "Delete a comment",
           "request": {
             "name": "Delete a comment",
@@ -754,12 +754,12 @@
       "description": "Files on a task: upload, download, thumbnails and delete.",
       "item": [
         {
-          "id": "c9f01a01-04ba-4a1b-b438-893a1497edbb",
+          "id": "d2948bf6-fc31-4c10-b55a-88d0dca80644",
           "name": "Upload a file to a task",
           "request": {
             "name": "Upload a file to a task",
             "description": {
-              "content": "Allowed for users who can update the task. Files up to 50 MB; larger files use the\nchunked upload endpoints. The file type is checked from its content, not only its name.\n\nThe new attachment starts with `scan_status: pending`. A queued virus scan then marks it\n`clean` (and queues a thumbnail for images) or `infected` (and deletes the file).\n",
+              "content": "Allowed for users who can update the task. Files up to 50 MB; larger files use the\nchunked upload endpoints. The file type is checked from its content, not only its name.\n\nThe new attachment starts with `scan_status: pending`. A queued virus scan then marks it\n`clean` (and queues a thumbnail for images, or a poster thumbnail and HLS stream for videos)\nor `infected` (and deletes the file).\n",
               "type": "text/plain"
             },
             "url": {
@@ -817,7 +817,7 @@
           }
         },
         {
-          "id": "9bb6e62e-1d76-4df3-aa6a-78d9af1de087",
+          "id": "d67be3d5-6e2b-4940-925d-ab813a9eff29",
           "name": "Download a file",
           "request": {
             "name": "Download a file",
@@ -861,7 +861,7 @@
           }
         },
         {
-          "id": "bac6beb4-3fef-4305-b97d-94413119698a",
+          "id": "16d9b858-a80a-4a54-b808-cc2521961209",
           "name": "Get an image attachment's thumbnail",
           "request": {
             "name": "Get an image attachment's thumbnail",
@@ -908,7 +908,65 @@
           }
         },
         {
-          "id": "50311ae1-6200-46ad-bc9b-f5b2c1032eb0",
+          "id": "44b81ac5-b4be-4846-982c-29527701e5c8",
+          "name": "Stream a video (HLS)",
+          "request": {
+            "name": "Stream a video (HLS)",
+            "description": {
+              "content": "Videos are transcoded in the background into an HLS stream with several quality levels\n(360p, 720p and 1080p, never above the source resolution). Once `stream_status` is `ready`,\npoint an HLS player at `master.m3u8` (the attachment's `stream_url`). The playlists use\nrelative paths, so the player requests the quality playlists and segments from this same endpoint.\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment",
+                "stream",
+                ":path"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                },
+                {
+                  "type": "any",
+                  "value": "master.m3u8",
+                  "key": "path",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) `master.m3u8`, `stream_{n}/index.m3u8` or `stream_{n}/seg_{nnn}.ts`. Anything else returns 404.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.apple.mpegurl"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "92dfe92d-c46f-4892-b194-a37f293244c8",
           "name": "Delete a file and all its versions",
           "request": {
             "name": "Delete a file and all its versions",
@@ -960,7 +1018,7 @@
       "description": "Earlier versions of a file, and restoring them.",
       "item": [
         {
-          "id": "0760c7a8-9d27-4aa5-a208-b0bc88518a2d",
+          "id": "e34b53d0-1d97-4bf1-b8ee-c4cf483bed63",
           "name": "List every version of a file",
           "request": {
             "name": "List every version of a file",
@@ -1007,7 +1065,7 @@
           }
         },
         {
-          "id": "d7d7b015-f321-4c64-8ee7-ca332338bd7c",
+          "id": "ddce2427-e239-485f-b052-8c7d07766fba",
           "name": "Upload a new version of a file",
           "request": {
             "name": "Upload a new version of a file",
@@ -1070,7 +1128,7 @@
           }
         },
         {
-          "id": "91dd228a-79c1-4bd4-ae3b-9ea0c960f108",
+          "id": "ee8955c2-d295-4051-ac3d-56d7753d534d",
           "name": "Restore an older version",
           "request": {
             "name": "Restore an older version",
@@ -1123,7 +1181,7 @@
       "description": "Uploading files over 50 MB in 5 MB pieces.",
       "item": [
         {
-          "id": "cff2bcfe-5f5d-43a8-bae3-b6bfd1cdd58f",
+          "id": "6c24dc33-5681-49bb-8a33-f5edc70e187b",
           "name": "Start a chunked upload",
           "request": {
             "name": "Start a chunked upload",
@@ -1184,7 +1242,7 @@
           }
         },
         {
-          "id": "7777abf3-b65e-4def-b137-55c1c6d4b282",
+          "id": "fb72fbe5-15ab-435d-ac91-3f7418039c0b",
           "name": "Check which chunks have arrived",
           "request": {
             "name": "Check which chunks have arrived",
@@ -1230,7 +1288,7 @@
           }
         },
         {
-          "id": "fa572fec-1777-4588-8f78-753ebcbc13ac",
+          "id": "6b91c0e2-3657-48b0-b709-d0c701008956",
           "name": "Cancel a chunked upload",
           "request": {
             "name": "Cancel a chunked upload",
@@ -1276,7 +1334,7 @@
           }
         },
         {
-          "id": "f76690f2-523c-4bb1-a660-e3a575de5030",
+          "id": "f3b4e7ae-508c-498f-bf1e-a9ea9283daca",
           "name": "Send one chunk",
           "request": {
             "name": "Send one chunk",
@@ -1350,7 +1408,7 @@
           }
         },
         {
-          "id": "8cbe4054-428c-47bc-baa4-ae304dadb0db",
+          "id": "c1b35ec8-60d9-4d14-8eaa-99419a65a451",
           "name": "Assemble the chunks into an attachment",
           "request": {
             "name": "Assemble the chunks into an attachment",
@@ -1403,7 +1461,7 @@
       "description": "Queued CSV and PDF reports of tasks.",
       "item": [
         {
-          "id": "2d9d3b64-9604-425d-80ff-d590aa015563",
+          "id": "ad9b27bf-c5cd-474e-bfec-b303f6b858bd",
           "name": "List your exports",
           "request": {
             "name": "List your exports",
@@ -1447,7 +1505,7 @@
           }
         },
         {
-          "id": "9ace6497-cc3f-4c56-aa82-c51fc877e083",
+          "id": "081d4e6b-f75c-424b-8601-8facfbf635f7",
           "name": "Request a CSV or PDF export of tasks",
           "request": {
             "name": "Request a CSV or PDF export of tasks",
@@ -1478,7 +1536,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"format\": \"pdf\",\n  \"status\": \"pending\",\n  \"priority\": \"low\",\n  \"assigned_user_id\": \"<integer>\",\n  \"created_by\": \"<integer>\",\n  \"search\": \"<string>\",\n  \"sort\": \"priority\",\n  \"direction\": \"asc\"\n}",
+              "raw": "{\n  \"format\": \"pdf\",\n  \"status\": \"cancelled\",\n  \"priority\": \"low\",\n  \"assigned_user_id\": \"<integer>\",\n  \"created_by\": \"<integer>\",\n  \"search\": \"<string>\",\n  \"sort\": \"title\",\n  \"direction\": \"desc\"\n}",
               "options": {
                 "raw": {
                   "headerFamily": "json",
@@ -1494,7 +1552,7 @@
           }
         },
         {
-          "id": "f7ecc286-1ec8-4204-a595-848e9998ea47",
+          "id": "a5b62f20-36a8-4448-a149-e06086ee8f2a",
           "name": "Check an export",
           "request": {
             "name": "Check an export",
@@ -1540,7 +1598,7 @@
           }
         },
         {
-          "id": "e976e17c-33a0-403f-aa29-3c5b8e8a46c1",
+          "id": "4018ed81-1a64-427f-8639-060be7e97b8b",
           "name": "Download a finished export",
           "request": {
             "name": "Download a finished export",
@@ -1590,7 +1648,7 @@
       "description": "Authorizing private WebSocket channels.",
       "item": [
         {
-          "id": "7fcc8e90-c53d-4e8b-8a13-1139577d9a54",
+          "id": "178ed8e7-1cdf-477f-accc-7b31c880f312",
           "name": "Authorize a private WebSocket channel",
           "request": {
             "name": "Authorize a private WebSocket channel",
@@ -1675,7 +1733,7 @@
     }
   ],
   "info": {
-    "_postman_id": "70e18321-3627-4e33-aee1-ef6a698fddc8",
+    "_postman_id": "18c325c5-6f37-4091-9221-df5d6b8f12ea",
     "name": "Task Management Platform API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {
