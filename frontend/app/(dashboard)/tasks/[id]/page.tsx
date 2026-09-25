@@ -7,7 +7,10 @@ import { formatDueDate } from "@/lib/task-labels";
 import { getTask, getUsers } from "@/lib/tasks";
 import type { Task } from "@/lib/types";
 import { TaskForm } from "../task-form";
+import { AttachmentList } from "./attachment-list";
+import { AttachmentUploader } from "./attachment-uploader";
 import { DeleteTaskButton } from "./delete-task-button";
+import { ScanStatusRefresher } from "./scan-status-refresher";
 
 async function loadTask(id: string) {
   const taskId = Number(id);
@@ -29,6 +32,7 @@ export async function generateMetadata({
 export default async function TaskPage({ params }: PageProps<"/tasks/[id]">) {
   const task = await loadTask((await params).id);
   const users = task.can.update ? await getUsers() : [];
+  const attachments = task.attachments ?? [];
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -58,6 +62,15 @@ export default async function TaskPage({ params }: PageProps<"/tasks/[id]">) {
       ) : (
         <TaskDetails task={task} />
       )}
+
+      <section aria-labelledby="attachments-heading" className="space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <h2 id="attachments-heading" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          Files
+        </h2>
+        <AttachmentList attachments={attachments} canDelete={task.can.update} />
+        {task.can.update && <AttachmentUploader taskId={task.id} />}
+        <ScanStatusRefresher pending={attachments.some((a) => a.scan_status === "pending")} />
+      </section>
 
       {task.can.delete && (
         <div className="border-t border-zinc-200 pt-6 dark:border-zinc-800">
