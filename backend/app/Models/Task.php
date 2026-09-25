@@ -17,6 +17,12 @@ class Task extends Model
     /** @use HasFactory<TaskFactory> */
     use HasFactory;
 
+    // Mirrors the DB defaults so a newly created task reports them before being re-fetched.
+    protected $attributes = [
+        'status' => TaskStatus::Pending->value,
+        'priority' => TaskPriority::Medium->value,
+    ];
+
     protected function casts(): array
     {
         return [

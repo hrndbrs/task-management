@@ -29,8 +29,8 @@ class StoreTaskRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['nullable', Rule::enum(TaskStatus::class)],
-            'priority' => ['nullable', Rule::enum(TaskPriority::class)],
+            'status' => ['sometimes', Rule::enum(TaskStatus::class)],
+            'priority' => ['sometimes', Rule::enum(TaskPriority::class)],
             'assigned_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'due_date' => ['nullable', 'date'],
         ];

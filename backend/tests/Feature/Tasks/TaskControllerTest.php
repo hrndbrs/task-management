@@ -2,7 +2,6 @@
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
-use App\Enums\UserRole;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -96,6 +95,25 @@ describe('store', function () {
             ->postJson('/api/tasks', [])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['title']);
+    });
+
+    it('reports the default status and priority when they are omitted', function () {
+        $token = actingAsToken(User::factory()->create());
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/tasks', ['title' => 'Defaults'])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.priority', 'medium');
+    });
+
+    it('returns 422 when status or priority is explicitly null', function () {
+        $token = actingAsToken(User::factory()->create());
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/tasks', ['title' => 'Nulls', 'status' => null, 'priority' => null])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['status', 'priority']);
     });
 });
 
