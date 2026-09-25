@@ -50,7 +50,9 @@ class TaskAttachmentController extends Controller
 
         abort_if($attachment->thumbnail_path === null, 404);
 
-        return Storage::disk(config('attachments.disk'))->response($attachment->thumbnail_path);
+        return Storage::disk(config('attachments.disk'))->response($attachment->thumbnail_path, null, [
+            'Cache-Control' => 'private, max-age=604800, immutable',
+        ]);
     }
 
     public function stream(TaskAttachment $attachment, string $path): StreamedResponse

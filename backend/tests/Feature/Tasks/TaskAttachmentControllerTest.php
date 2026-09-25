@@ -244,7 +244,8 @@ describe('thumbnails', function () {
         $this->actingAs($user, 'api')
             ->get("/api/attachments/{$attachment->id}/thumbnail")
             ->assertOk()
-            ->assertHeader('Content-Type', 'image/webp');
+            ->assertHeader('Content-Type', 'image/webp')
+            ->assertHeader('Cache-Control', 'immutable, max-age=604800, private');
     });
 
     it('returns 404 when the attachment has no thumbnail', function () {
