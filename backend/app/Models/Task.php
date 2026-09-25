@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Events\TasksChanged;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -32,6 +33,13 @@ class Task extends Model
             'priority' => TaskPriority::class,
             'due_date' => 'date',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(fn (Task $task) => TasksChanged::dispatch([$task->id], 'created'));
+        static::updated(fn (Task $task) => TasksChanged::dispatch([$task->id], 'updated'));
+        static::deleted(fn (Task $task) => TasksChanged::dispatch([$task->id], 'deleted'));
     }
 
     public function assignedUser(): BelongsTo

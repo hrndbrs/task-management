@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\TaskStatus;
+use App\Events\TasksChanged;
 use App\Models\Task;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,5 +32,7 @@ class UpdateTaskStatuses implements ShouldQueue
         }
 
         Task::whereKey($this->taskIds)->update(['status' => $this->status]);
+
+        TasksChanged::dispatch($this->taskIds, 'updated');
     }
 }
