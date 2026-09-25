@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { requireUser } from "@/lib/dal";
+import { LiveTaskUpdates } from "./live-task-updates";
 
 export default async function DashboardLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
@@ -33,6 +34,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+      <LiveTaskUpdates />
     </div>
   );
 }

@@ -22,7 +22,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "php artisan serve --port=8000",
+      command: "php artisan dev --inline",
       cwd: "../backend",
       url: "http://localhost:8000/up",
       reuseExistingServer: true,

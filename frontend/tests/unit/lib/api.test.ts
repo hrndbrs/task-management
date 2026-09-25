@@ -27,14 +27,16 @@ describe("apiFetch", () => {
     expect(requestOf(fetchMock).headers.has("Authorization")).toBe(false);
   });
 
-  it("marks string bodies as JSON but leaves form data alone", async () => {
-    const fetchMock = mockFetch(json(200, {}), json(200, {}));
+  it("marks string bodies as JSON but leaves form and URL-encoded bodies alone", async () => {
+    const fetchMock = mockFetch(json(200, {}), json(200, {}), json(200, {}));
 
     await apiFetch("/tasks", { method: "POST", body: "{}" });
     await apiFetch("/tasks/1/attachments", { method: "POST", body: new FormData() });
+    await apiFetch("/broadcasting/auth", { method: "POST", body: new URLSearchParams({ a: "1" }) });
 
     expect(requestOf(fetchMock, 0).headers.get("Content-Type")).toBe("application/json");
     expect(requestOf(fetchMock, 1).headers.has("Content-Type")).toBe(false);
+    expect(requestOf(fetchMock, 2).headers.has("Content-Type")).toBe(false);
   });
 
   it("never caches API responses", async () => {

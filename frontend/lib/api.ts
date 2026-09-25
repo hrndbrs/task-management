@@ -7,7 +7,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
 
   headers.set("Accept", "application/json");
-  if (init.body && !(init.body instanceof FormData)) {
+  if (typeof init.body === "string" && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (token) {
