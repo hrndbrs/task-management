@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachmentVersionController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\BulkTaskStatusController;
 use App\Http\Controllers\ChunkedUploadController;
 use App\Http\Controllers\TaskAttachmentController;
 use App\Http\Controllers\TaskController;
@@ -17,6 +18,9 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('auth:api')->group(function () {
+    Route::post('tasks/bulk-status', [BulkTaskStatusController::class, 'store'])->name('tasks.bulk-status.store');
+    Route::get('tasks/bulk-status/{batchId}', [BulkTaskStatusController::class, 'show'])->whereUuid('batchId')->name('tasks.bulk-status.show');
+
     Route::apiResource('tasks', TaskController::class);
 
     Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
