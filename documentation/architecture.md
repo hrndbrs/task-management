@@ -92,22 +92,22 @@ Task responses include a `can: { update, delete }` object computed by the same p
 - **Storage.** A private Laravel disk (`ATTACHMENTS_DISK`, `local` by default). Files are stored under random names in `attachments/{task_id}/`, never in the public web root. The only way to get a file is through an authorized download endpoint.
 - **Validation.** Allowed extensions are listed in `config/attachments.php` (images, office documents, text/CSV, MP4/WebM/MOV). Laravel's `mimes` rule checks the type **from the file's content**, so renaming `virus.exe` to `photo.png` is rejected. Maximum 50 MB per request.
 - **Chunked upload for files over 50 MB** (up to 2 GB). The client starts an upload session, sends 5 MB chunks (any order, retries allowed, each chunk's exact size is checked), then asks the server to complete it. The server assembles the file, validates its content again, and creates the attachment. A cache lock stops two "complete" requests racing. Unfinished sessions and their chunks are pruned after 24 hours. `GET /uploads/{id}` lists received chunks so an interrupted upload can resume.
-- **Upload progress in the browser.** The frontend uses `XMLHttpRequest`, not `fetch`, because only XHR reports upload progress. Files go through a Next.js route handler (`app/api/[...path]/route.ts`) that attaches the token and **streams** the body through without buffering it. It forwards an allowlist of routes only (upload, chunked upload, file and thumbnail download, export download). The frontend switches to chunked upload above 45 MB, leaving headroom under PHP's 50 MB `post_max_size` for the multipart wrapper.
+- **Upload progress in the browser.** The frontend uses `XMLHttpRequest`, not `fetch`, because only XHR reports upload progress. Files go through a Next.js route handler (`app/api/[...path]/route.ts`) that attaches the token and **streams** the body through without buffering it. It forwards an allowlist of routes only (upload, chunked upload, file and thumbnail download, video stream, export download). The frontend switches to chunked upload above 45 MB, leaving headroom under PHP's 50 MB `post_max_size` for the multipart wrapper.
 
 **Why chunking.** PHP and most proxies cap request bodies. Chunks keep every request small, make failures cheap to retry, and allow resuming.
 
-## 6. File processing: virus scan, then thumbnail
+## 6. File processing: virus scan, then thumbnail or video stream
 
 **Decision.** Every upload is saved with `scan_status = pending` and a queued `ScanAttachmentForViruses` job:
 
-- **Clean**: marked `clean`; images then get a queued `GenerateAttachmentThumbnail` job (Intervention Image with GD, scaled to fit 300×300, WebP).
+- **Clean**: marked `clean`; images then get a queued `GenerateAttachmentThumbnail` job (Intervention Image with GD, scaled to fit 300×300, WebP), and videos get a queued `ProcessVideoAttachment` job (decision 13).
 - **Infected**: the file and any thumbnail are deleted, the row is kept as `infected` so users see what happened, and a warning is logged.
 
 Downloads are refused while a file is `pending` (409) or `infected` (410). The frontend shows "Scanning for viruses…" and polls every 3 seconds until the scan finishes.
 
 **The scanner is simulated** behind a `VirusScanner` interface (`app/Contracts/VirusScanner.php`). The bound implementation, `EicarVirusScanner`, detects the industry-standard [EICAR test signature](https://www.eicar.org/download-anti-malware-testfile/), reading the file in 1 MB blocks (with overlap, so a signature split across blocks is still found) to keep memory flat for large files. Swapping in ClamAV means one new class and one binding in `AppServiceProvider`.
 
-**Why this order.** Thumbnails are only generated from files already known to be clean, so an image-parsing bug can't be reached with a malicious file.
+**Why this order.** Thumbnails and video streams are only generated from files already known to be clean, so an image or video parsing bug can't be reached with a malicious file.
 
 ## 7. File versioning
 
@@ -124,8 +124,9 @@ Downloads are refused while a file is `pending` (409) or `infected` (410). The f
 | `TaskAssigned` (mail notification) | Task created or reassigned to someone else | Queued **after the transaction commits**, so a rolled-back change never sends mail. 3 tries with backoff.                                                                                                    |
 | `UpdateTaskStatuses`               | `POST /api/tasks/bulk-status`              | Up to 1000 tasks, split into jobs of 100 in a **job batch**. `GET /api/tasks/bulk-status/{id}` reports progress. Permission for every task is checked up front, so nothing is half-applied because of a 403. |
 | `ScanAttachmentForViruses`         | Every upload                               | See decision 6.                                                                                                                                                                                              |
+| `ProcessVideoAttachment`           | A clean video                              | Poster thumbnail and HLS stream. See decision 13.                                                                                                                                                            |
 | `GenerateAttachmentThumbnail`      | A clean image                              | See decision 6.                                                                                                                                                                                              |
-| `GenerateTaskExport`               | `POST /api/exports`                        | CSV or PDF of the tasks matching the given filters. The dashboard's Export button sends the current filters, polls every 1.5 s until it's `completed`, then downloads it.                                    :|
+| `GenerateTaskExport`               | `POST /api/exports`                        | CSV or PDF of the tasks matching the given filters. The dashboard's Export button sends the current filters, polls every 1.5 s until it's `completed`, then downloads it.                                    |
 | Broadcast events                   | Task and comment changes                   | See decision 9.                                                                                                                                                                                              |
 
 Exports: CSV rows are streamed from the database in batches of 500 (`lazy()`), so memory stays flat for large exports. Cells starting with `=`, `+`, `-`, `@` are prefixed with `'` so spreadsheet apps don't run them as formulas (CSV injection). PDFs (dompdf) are capped at 2000 rows because rendering slows sharply beyond that; larger exports must use CSV. Exports are deleted after 7 days.
@@ -133,6 +134,8 @@ Exports: CSV rows are streamed from the database in batches of 500 (`lazy()`), s
 Housekeeping: `model:prune` runs daily through the scheduler, deleting expired chunked uploads and old exports together with their files.
 
 **Why the database driver.** It needs no extra infrastructure (MySQL is already there), survives restarts, and supports job batches. Switching to Redis for higher throughput is a one-line `QUEUE_CONNECTION` change.
+
+The queue's `retry_after` is 900 seconds, above the longest job's timeout (video processing, 840 seconds), so a long-running job is never handed to a second worker while the first is still working on it.
 
 ## 9. Real-time updates: Laravel Reverb
 
@@ -172,15 +175,33 @@ See [database-schema.md](database-schema.md) for every table.
 
 Backend tests run on MySQL, the same engine as production, so foreign keys, unique constraints and the raw SQL used for sorting behave exactly as they will live. They fake the queue, mail and broadcasting and run in about 5 seconds. E2E tests exercise the real queue worker and Reverb.
 
+## 13. Video streaming: HLS with adaptive quality
+
+**Decision.** Uploaded videos (MP4, WebM, MOV) are converted into an HLS stream by a queued `ProcessVideoAttachment` job, once the virus scan passes:
+
+1. `ffprobe` reads the resolution, duration and whether there is an audio track.
+2. `ffmpeg` grabs a frame one second in (or halfway through a shorter clip) as the poster; it is stored as the attachment's WebP thumbnail like an image's.
+3. `ffmpeg` encodes H.264/AAC renditions at 360p, 720p and 1080p, never above the source resolution (`VideoRenditions`), each cut into 4-second segments, plus a master playlist that lists them with their bandwidth. Key frames are forced every 4 seconds so all renditions switch cleanly at segment boundaries.
+4. The playlists and segments are stored under `attachments/{task}/streams/{attachment}/`, and `stream_status` becomes `ready`. If processing still fails after its retries, `stream_status` becomes `failed` and the original file stays downloadable.
+
+The player (`video-player.tsx`) uses [hls.js](https://github.com/video-dev/hls.js), loaded only when someone presses Play, so the library isn't in the page's main bundle. hls.js picks the quality automatically from measured bandwidth and switches mid-playback; a Quality menu lets the viewer pin one. Browsers where hls.js can't run, such as older iPhones, play the same master playlist with their built-in HLS support.
+
+Everything is served through `GET /api/attachments/{id}/stream/{path}`, which checks the user can see the task and accepts only the exact playlist and segment file names, so nothing else on the disk is reachable. The Next.js proxy forwards the same narrow pattern. Because the playlists use relative paths, the player finds every playlist and segment through the proxy without the backend knowing its public address.
+
+**Why HLS.** It is the standard format for adaptive streaming, works in every browser (natively in Safari, through hls.js elsewhere), and is plain static files, so it can later move to S3 or a CDN unchanged. Preparing the renditions once at upload time means playback never waits for transcoding.
+
+**Cost.** `ffmpeg` must be installed where the queue worker runs (`FFMPEG_BINARY` and `FFPROBE_BINARY` override the paths). Transcoding takes CPU time in proportion to the video's length and resolution, and the renditions take storage on top of the original.
+
 ## Known limitations and next steps
 
-| Area                     | Current state                                                                          | Next step                                                                          |
-| ------------------------ | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Virus scanning           | EICAR-only simulation                                                                  | Bind a ClamAV implementation of `VirusScanner`                                     |
-| File storage             | Local disk                                                                             | Set `ATTACHMENTS_DISK=s3`; the code only talks to Laravel's filesystem abstraction |
-| Sessions                 | No refresh tokens; re-login after 60 minutes                                           | Add a refresh endpoint and rotate tokens in the Next.js server                     |
-| Attachments in real time | Other viewers see new files after a refresh                                            | Broadcast attachment events on `private-tasks.{id}`                                |
-| Comments                 | Can't be edited                                                                        | Add `updated_at` and an edit endpoint                                              |
-| Search                   | Title only                                                                             | Full-text index over title and description                                         |
-| Seeded attachments       | Rows without files; downloading one returns an error                                   | Seed real sample files, and return 404 when a stored file is missing               |
-| Bonus challenges         | Video streaming, presence and typing indicators, and Redis caching are not implemented |                                                                                    |
+| Area                     | Current state                                                                                    | Next step                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Virus scanning           | EICAR-only simulation                                                                            | Bind a ClamAV implementation of `VirusScanner`                                     |
+| File storage             | Local disk                                                                                       | Set `ATTACHMENTS_DISK=s3`; the code only talks to Laravel's filesystem abstraction |
+| Sessions                 | No refresh tokens; re-login after 60 minutes                                                     | Add a refresh endpoint and rotate tokens in the Next.js server                     |
+| Attachments in real time | Other viewers see new files after a refresh                                                      | Broadcast attachment events on `private-tasks.{id}`                                |
+| Comments                 | Can't be edited                                                                                  | Add `updated_at` and an edit endpoint                                              |
+| Search                   | Title only                                                                                       | Full-text index over title and description                                         |
+| Seeded attachments       | Rows without files; downloading one returns an error                                             | Seed real sample files, and return 404 when a stored file is missing               |
+| Video processing         | Runs on the same queue as everything else, so a long transcode delays scans and emails behind it | Move `ProcessVideoAttachment` to a dedicated `media` queue with its own worker     |
+| Bonus challenges         | Presence and typing indicators, and Redis caching, are not implemented                           |                                                                                    |

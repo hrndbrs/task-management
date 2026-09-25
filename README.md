@@ -11,6 +11,7 @@ A task management system with real-time updates, file attachments and background
 - Role- and ownership-based permissions (admins, task creators, assignees)
 - File attachments: type and size validation checked against file content, private storage, downloads through authorized endpoints
 - Image thumbnails (WebP), generated in the background
+- Video streaming: videos are converted with ffmpeg into adaptive HLS streams (360p, 720p, 1080p) with a poster thumbnail
 - Chunked, resumable uploads for files over 50 MB (up to 2 GB)
 - Simulated virus scanning (EICAR signature); files can't be downloaded until they pass
 - File versioning with restore
@@ -26,15 +27,16 @@ A task management system with real-time updates, file attachments and background
 - Drag-and-drop file upload with per-file progress bars, cancel, and automatic chunking for large files
 - Search, filters and sorting kept in the URL
 - Export the current task list as CSV or PDF (generated in the background, then downloaded)
+- Video player with automatic and manual quality selection (hls.js)
 - Real-time comments
 - Toast notifications
 - Responsive from 320 px phones to desktop
 
-**Not implemented:** the optional bonus challenges (video streaming, presence and typing indicators, Redis caching).
+**Bonus challenges:** video streaming is implemented; presence and typing indicators, and Redis caching, are not.
 
 ## Quick start
 
-Needs PHP 8.3+ (with `upload_max_filesize` and `post_max_size` at 50M), Composer, Node.js 20.9+ and MySQL 8+. The full walkthrough, including every environment variable, is in **[documentation/setup-guide.md](documentation/setup-guide.md)**.
+Needs PHP 8.3+ (with `upload_max_filesize` and `post_max_size` at 50M), Composer, Node.js 20.9+, MySQL 8+ and ffmpeg. The full walkthrough, including every environment variable, is in **[documentation/setup-guide.md](documentation/setup-guide.md)**.
 
 ```bash
 # Backend
@@ -103,6 +105,7 @@ Laravel keeps application code in `backend/app/` and Next.js in `frontend/app/`;
 | Layer     | Technology                                                                              |
 | --------- | --------------------------------------------------------------------------------------- |
 | API       | PHP 8.3+, Laravel 13, `php-open-source-saver/jwt-auth`, Intervention Image (GD), dompdf |
+| Video     | ffmpeg (HLS transcoding, poster frames), hls.js                                         |
 | Real time | Laravel Reverb (WebSockets, Pusher protocol), Laravel Echo                              |
 | Queue     | Laravel queues on the database driver, job batches                                      |
 | Database  | MySQL 8+                                                                                |

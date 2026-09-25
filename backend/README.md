@@ -1,6 +1,6 @@
 # Backend: Laravel API
 
-The REST API for the task management platform: JWT authentication, tasks, comments, file attachments, background jobs and WebSocket broadcasting. Requires PHP 8.3+, Composer and MySQL 8+.
+The REST API for the task management platform: JWT authentication, tasks, comments, file attachments, background jobs and WebSocket broadcasting. Requires PHP 8.3+, Composer, MySQL 8+ and ffmpeg (for video streaming).
 
 Full setup, including every environment variable: [../documentation/setup-guide.md](../documentation/setup-guide.md). API reference: [../documentation/api-docs/](../documentation/api-docs/).
 
@@ -34,22 +34,23 @@ Code style: `vendor/bin/pint`.
 
 ## Where things are
 
-| Path                                       | Contents                                                                |
-| ------------------------------------------ | ----------------------------------------------------------------------- |
-| `routes/api.php`                           | Every REST endpoint                                                     |
-| `routes/channels.php`                      | Private WebSocket channels and who may join them                        |
-| `app/Http/Controllers/`                    | One controller per resource                                             |
-| `app/Http/Requests/`                       | Validation and authorization for each write endpoint                    |
-| `app/Http/Resources/`                      | JSON shape of every response                                            |
-| `app/Policies/`                            | Who may do what (tasks, comments, exports, chunked uploads)             |
-| `app/Jobs/`                                | Virus scan, thumbnail, export and bulk status jobs                      |
-| `app/Notifications/TaskAssigned.php`       | Queued assignment email                                                 |
-| `app/Events/`                              | Broadcast events (`tasks.changed`, `comment.posted`, `comment.deleted`) |
-| `app/Actions/`                             | Storing an attachment version; assembling a chunked upload              |
-| `app/Services/EicarVirusScanner.php`       | The simulated virus scanner (behind `app/Contracts/VirusScanner.php`)   |
-| `config/attachments.php`                   | Allowed file types, size limits, chunk size                             |
-| `config/exports.php`                       | Export storage, PDF row limit, retention                                |
-| `database/schema.sql`, `database/dump.sql` | Generated SQL schema, and schema plus sample data                       |
+| Path                                                      | Contents                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `routes/api.php`                                          | Every REST endpoint                                                             |
+| `routes/channels.php`                                     | Private WebSocket channels and who may join them                                |
+| `app/Http/Controllers/`                                   | One controller per resource                                                     |
+| `app/Http/Requests/`                                      | Validation and authorization for each write endpoint                            |
+| `app/Http/Resources/`                                     | JSON shape of every response                                                    |
+| `app/Policies/`                                           | Who may do what (tasks, comments, exports, chunked uploads)                     |
+| `app/Jobs/`                                               | Virus scan, thumbnail, video processing, export and bulk status jobs            |
+| `app/Notifications/TaskAssigned.php`                      | Queued assignment email                                                         |
+| `app/Events/`                                             | Broadcast events (`tasks.changed`, `comment.posted`, `comment.deleted`)         |
+| `app/Actions/`                                            | Storing an attachment version; assembling a chunked upload                      |
+| `app/Services/EicarVirusScanner.php`                      | The simulated virus scanner (behind `app/Contracts/VirusScanner.php`)           |
+| `app/Services/VideoTranscoder.php`, `VideoRenditions.php` | ffmpeg calls for HLS streams and poster frames; which quality levels to build   |
+| `config/attachments.php`                                  | Allowed file types, size limits, chunk size, video quality levels, ffmpeg paths |
+| `config/exports.php`                                      | Export storage, PDF row limit, retention                                        |
+| `database/schema.sql`, `database/dump.sql`                | Generated SQL schema, and schema plus sample data                               |
 
 ## Useful commands
 

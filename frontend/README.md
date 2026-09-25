@@ -38,7 +38,7 @@ The browser never holds the API token. Signing in stores the JWT in an httpOnly 
 
 - **Pages** are server components that call the API from the Next.js server (`lib/api.ts`, `lib/tasks.ts`).
 - **Changes** go through server actions (`app/actions/`).
-- **File uploads and downloads** go through `app/api/[...path]/route.ts`, which streams them to the API with the token attached. It only forwards an allowlist of file routes (uploads, file and thumbnail downloads, export downloads).
+- **File uploads and downloads** go through `app/api/[...path]/route.ts`, which streams them to the API with the token attached. It only forwards an allowlist of file routes (uploads, file and thumbnail downloads, video streams, export downloads).
 - **WebSocket channel authorization** goes through `app/api/broadcasting/auth/route.ts`.
 - **`proxy.ts`** sends signed-out visitors to `/login`.
 
@@ -50,6 +50,7 @@ The browser never holds the API token. Signing in stores the JWT in an httpOnly 
 | `app/(dashboard)/page.tsx`                           | Task list with search, filters, sort and pagination              |
 | `app/(dashboard)/tasks/new/`, `tasks/[id]/`          | Create a task; view or edit one, with its files and comments     |
 | `app/(dashboard)/tasks/[id]/attachment-uploader.tsx` | Drag-and-drop uploads with progress                              |
+| `app/(dashboard)/tasks/[id]/video-player.tsx`        | HLS video player (hls.js, loaded on demand) with quality picker  |
 | `app/(dashboard)/tasks/[id]/task-comments.tsx`       | Real-time comments                                               |
 | `app/(dashboard)/live-task-updates.tsx`              | Refreshes the page when tasks change elsewhere                   |
 | `app/(dashboard)/export-button.tsx`                  | CSV/PDF export of the current task list                          |

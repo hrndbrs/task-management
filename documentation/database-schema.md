@@ -62,6 +62,9 @@ erDiagram
         varchar mime_type
         varchar scan_status
         timestamp scanned_at
+        varchar stream_status
+        varchar stream_path
+        decimal duration
         timestamp uploaded_at
     }
     task_comments {
@@ -140,11 +143,14 @@ Status and priority are stored as strings rather than MySQL `ENUM`s, so adding a
 | `version`        | int unsigned    | no   | `1`            | _(added, versioning)_ 1, 2, 3… within the group                |
 | `file_name`      | varchar(255)    | no   |                | Original name as uploaded                                      |
 | `file_path`      | varchar(255)    | no   |                | Path on the private attachments disk (random name)             |
-| `thumbnail_path` | varchar(255)    | yes  |                | _(added, thumbnails)_ WebP thumbnail, images only              |
+| `thumbnail_path` | varchar(255)    | yes  |                | _(added, thumbnails)_ WebP thumbnail: images, and video poster frames |
 | `file_size`      | bigint unsigned | no   |                | Bytes (bigint so files over 4 GB would still fit)              |
 | `mime_type`      | varchar(255)    | no   |                | Detected from the file content                                 |
 | `scan_status`    | varchar(255)    | no   | `pending`      | _(added, virus scan)_ `pending`, `clean`, `infected`           |
 | `scanned_at`     | timestamp       | yes  |                | _(added, virus scan)_                                          |
+| `stream_status`  | varchar(255)    | yes  |                | _(added, video streaming)_ `pending`, `ready`, `failed`; null for non-videos |
+| `stream_path`    | varchar(255)    | yes  |                | _(added, video streaming)_ Directory holding the HLS playlists and segments |
+| `duration`       | decimal(10,3)   | yes  |                | _(added, video streaming)_ Video length in seconds             |
 | `uploaded_at`    | timestamp       | no   | current time   |                                                                |
 
 **Indexes:** unique `(version_group, version)`, which prevents two uploads from getting the same version number and also serves "all versions of this file" lookups; `task_id`.

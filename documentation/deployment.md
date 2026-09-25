@@ -32,6 +32,7 @@ flowchart LR
 
 - PHP 8.3+ with FPM and the `pdo_mysql`, `gd`, `mbstring`, `fileinfo`, `openssl`, `intl` extensions
 - Composer 2, Node.js 20.9+, MySQL 8+, Nginx, Supervisor, Certbot (TLS)
+- `ffmpeg` and `ffprobe` (`apt install ffmpeg`) on the server that runs the queue worker, for video streaming
 - Two DNS names pointing at the server, for example `app.example.com` and `ws.example.com`
 
 Set PHP's upload limits in **both** the FPM and CLI `php.ini`:
@@ -205,7 +206,7 @@ numprocs=2
 process_name=%(program_name)s_%(process_num)02d
 autostart=true
 autorestart=true
-stopwaitsecs=90
+stopwaitsecs=900
 redirect_stderr=true
 stdout_logfile=/var/log/transcosmos/queue.log
 
@@ -233,7 +234,7 @@ mkdir -p /var/log/transcosmos
 supervisorctl reread && supervisorctl update
 ```
 
-The file-processing, export, bulk-update and email jobs set their own retry counts and backoff, so the worker needs no `--tries`; broadcast events are attempted once. `stopwaitsecs=90` lets a running export (75-second timeout) finish before a restart.
+The file-processing, export, bulk-update and email jobs set their own retry counts and backoff, so the worker needs no `--tries`; broadcast events are attempted once. `stopwaitsecs=900` lets a running job finish before a restart; the longest, video processing, has an 840-second timeout. Keep the queue's `retry_after` (`DB_QUEUE_RETRY_AFTER`, default 900) above that timeout.
 
 ## 7. Scheduler
 
