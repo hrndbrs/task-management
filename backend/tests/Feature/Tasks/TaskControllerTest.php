@@ -87,6 +87,18 @@ describe('index', function () {
             ->getJson('/api/tasks?sort=password')
             ->assertStatus(422);
     });
+
+    it('reports what the requester may do with each task', function () {
+        $user = User::factory()->create();
+        $token = actingAsToken($user);
+        $assigned = Task::factory()->create(['assigned_user_id' => $user->id]);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/tasks');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.id', $assigned->id)
+            ->assertJsonPath('data.0.can', ['update' => true, 'delete' => false]);
+    });
 });
 
 describe('store', function () {

@@ -26,6 +26,10 @@ class TaskResource extends JsonResource
             'attachments' => TaskAttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'can' => $this->when($request->user() !== null, fn () => [
+                'update' => $request->user()->can('update', $this->resource),
+                'delete' => $request->user()->can('delete', $this->resource),
+            ]),
         ];
     }
 }
