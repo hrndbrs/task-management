@@ -61,4 +61,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(TaskComment::class);
     }
+
+    public function exports(): HasMany
+    {
+        return $this->hasMany(Export::class);
+    }
 }
