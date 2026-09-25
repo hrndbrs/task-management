@@ -64,7 +64,7 @@ Or paste `openapi.yaml` into https://editor.swagger.io.
 | POST   | `/exports`                        | Request a CSV or PDF export (background)                                                                    |
 | GET    | `/exports/{id}`                   | Export status                                                                                               |
 | GET    | `/exports/{id}/download`          | Download a finished export                                                                                  |
-| POST   | `/broadcasting/auth`              | Authorize a private WebSocket channel                                                                       |
+| POST   | `/broadcasting/auth`              | Authorize a private or presence WebSocket channel                                                           |
 
 Outside `/api`, `GET /up` is a health check that returns 200 when the app is running.
 

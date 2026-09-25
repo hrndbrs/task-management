@@ -12,7 +12,7 @@ info:
     **Errors.** All errors are JSON with a `message`. Validation failures (422) also carry an `errors`
     object keyed by field, each holding a list of messages.
 
-    **Real-time.** Changes are broadcast over Laravel Reverb (Pusher protocol). Private channels are
+    **Real-time.** Changes are broadcast over Laravel Reverb (Pusher protocol). Private and presence channels are
     authorized through `POST /broadcasting/auth`. See `documentation/architecture.md` for the channels
     and event payloads.
 servers:
@@ -859,10 +859,12 @@ paths:
     post:
       operationId: authorizeChannel
       tags: [Broadcasting]
-      summary: Authorize a private WebSocket channel
+      summary: Authorize a private or presence WebSocket channel
       description: |
         Called by Laravel Echo when subscribing. Channels:
-        `private-tasks` (any signed-in user) and `private-tasks.{task}` (anyone who can view the task).
+        `private-tasks` (any signed-in user), `private-tasks.{task}` (anyone who can view the task),
+        `presence-online` (any signed-in user) and `presence-tasks.{task}.viewers` (anyone who can view the task).
+        Presence responses also carry `channel_data`, the member's `{ id, name }`.
       requestBody:
         required: true
         content:
@@ -882,6 +884,9 @@ paths:
                 type: object
                 properties:
                   auth: { type: string }
+                  channel_data:
+                    type: string
+                    description: 'Presence channels only. JSON of `{ user_id, user_info: { id, name } }`.'
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { description: 'Not allowed on this channel, or the channel does not exist' }
 

@@ -139,13 +139,22 @@ The queue's `retry_after` is 900 seconds, above the longest job's timeout (video
 
 ## 9. Real-time updates: Laravel Reverb
 
-**Decision.** Laravel Reverb, a first-party WebSocket server speaking the Pusher protocol. The frontend uses Laravel Echo (`@laravel/echo-react`). All channels are private; Echo authorizes them through `POST /api/broadcasting/auth`, which the browser reaches via a Next.js route handler that adds the JWT.
+**Decision.** Laravel Reverb, a first-party WebSocket server speaking the Pusher protocol. The frontend uses Laravel Echo (`@laravel/echo-react`). Channels are private or presence; Echo authorizes both through `POST /api/broadcasting/auth`, which the browser reaches via a Next.js route handler that adds the JWT.
 
 | Channel              | Who may join                    | Event             | Payload                                                              | What the UI does                                                                         |
 | -------------------- | ------------------------------- | ----------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `private-tasks`      | Any signed-in user              | `tasks.changed`   | `{ taskIds: number[], action: "created" \| "updated" \| "deleted" }` | Re-fetches the current page (bursts are coalesced into one refresh after 300 ms).        |
 | `private-tasks.{id}` | Anyone who can view task `{id}` | `comment.posted`  | `{ comment: Comment }`                                               | Adds the comment (skipping duplicates by id) and shows a toast if someone else wrote it. |
 | `private-tasks.{id}` | Anyone who can view task `{id}` | `comment.deleted` | `{ id: number }`                                                     | Removes the comment.                                                                     |
+
+Presence channels carry each member's `{ id, name }` and nothing else:
+
+| Channel                       | Who may join                    | Events                                             | What the UI does                                                                                           |
+| ----------------------------- | ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `presence-online`             | Any signed-in user              | Member joined / left                               | Header shows who is online (avatars on wider screens, a count on phones).                                  |
+| `presence-tasks.{id}.viewers` | Anyone who can view task `{id}` | Member joined / left; client event `client-typing` | Task page shows who else has it open; the comment box shows who is typing.                                 |
+
+**Typing indicators are client events (whispers).** Typing is ephemeral and high-frequency, so it goes browser to browser through Reverb without touching Laravel or the database. Reverb only accepts client events from members of a presence channel (`accept_client_events_from: members`), which is why typing rides on the viewers channel. The sender whispers `{ typing: true }` at most every 2 seconds while the draft is non-empty, and `{ typing: false }` when it posts or clears the draft. Receivers identify the sender by the `user_id` Reverb stamps on every client event from its authenticated connection, never by anything in the payload, so a member can't make it look like someone else is typing. They show only senders who are current members of the channel, with the name from the presence member list, and drop a typist after 5 seconds without a new whisper or when they leave.
 
 All events are dispatched **after the database transaction commits**, so clients never react to a change that was rolled back.
 
@@ -204,4 +213,4 @@ Everything is served through `GET /api/attachments/{id}/stream/{path}`, which ch
 | Search                   | Title only                                                                                       | Full-text index over title and description                                         |
 | Seeded attachments       | Rows without files; downloading one returns an error                                             | Seed real sample files, and return 404 when a stored file is missing               |
 | Video processing         | Runs on the same queue as everything else, so a long transcode delays scans and emails behind it | Move `ProcessVideoAttachment` to a dedicated `media` queue with its own worker     |
-| Bonus challenges         | Presence and typing indicators, and Redis caching, are not implemented                           |                                                                                    |
+| Bonus challenges         | Redis caching is not implemented                                                                 |                                                                                    |

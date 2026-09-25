@@ -17,7 +17,7 @@ A task management system with real-time updates, file attachments and background
 - File versioning with restore
 - Background jobs: assignment emails, bulk status updates (job batches with progress), thumbnail generation, virus scanning, CSV/PDF exports
 - Comments on tasks
-- Real-time broadcasting over Laravel Reverb (task changes, comments)
+- Real-time broadcasting over Laravel Reverb (task changes, comments, presence)
 
 **Frontend (Next.js, `frontend/`)**
 
@@ -29,10 +29,11 @@ A task management system with real-time updates, file attachments and background
 - Export the current task list as CSV or PDF (generated in the background, then downloaded)
 - Video player with automatic and manual quality selection (hls.js)
 - Real-time comments
+- Online users in the header, who else is viewing a task, and typing indicators on comments
 - Toast notifications
 - Responsive from 320 px phones to desktop
 
-**Bonus challenges:** video streaming is implemented; presence and typing indicators, and Redis caching, are not.
+**Bonus challenges:** video streaming, and presence and typing indicators, are implemented; Redis caching is not.
 
 ## Quick start
 

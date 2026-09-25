@@ -37,7 +37,7 @@ Code style: `vendor/bin/pint`.
 | Path                                                      | Contents                                                                        |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `routes/api.php`                                          | Every REST endpoint                                                             |
-| `routes/channels.php`                                     | Private WebSocket channels and who may join them                                |
+| `routes/channels.php`                                     | Private and presence WebSocket channels and who may join them                   |
 | `app/Http/Controllers/`                                   | One controller per resource                                                     |
 | `app/Http/Requests/`                                      | Validation and authorization for each write endpoint                            |
 | `app/Http/Resources/`                                     | JSON shape of every response                                                    |

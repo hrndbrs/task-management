@@ -51,7 +51,10 @@ The browser never holds the API token. Signing in stores the JWT in an httpOnly 
 | `app/(dashboard)/tasks/new/`, `tasks/[id]/`          | Create a task; view or edit one, with its files and comments     |
 | `app/(dashboard)/tasks/[id]/attachment-uploader.tsx` | Drag-and-drop uploads with progress                              |
 | `app/(dashboard)/tasks/[id]/video-player.tsx`        | HLS video player (hls.js, loaded on demand) with quality picker  |
-| `app/(dashboard)/tasks/[id]/task-comments.tsx`       | Real-time comments                                               |
+| `app/(dashboard)/tasks/[id]/task-comments.tsx`       | Real-time comments with typing indicators                        |
+| `app/(dashboard)/tasks/[id]/task-viewers.tsx`        | Who else has the task open                                       |
+| `components/online-users.tsx`                        | Online users in the header                                       |
+| `lib/presence.ts`                                    | Presence channel members as React state                          |
 | `app/(dashboard)/live-task-updates.tsx`              | Refreshes the page when tasks change elsewhere                   |
 | `app/(dashboard)/export-button.tsx`                  | CSV/PDF export of the current task list                          |
 | `app/actions/`                                       | Server actions: auth, tasks, attachments, comments, exports      |

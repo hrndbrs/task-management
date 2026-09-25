@@ -1649,11 +1649,11 @@
       "item": [
         {
           "id": "178ed8e7-1cdf-477f-accc-7b31c880f312",
-          "name": "Authorize a private WebSocket channel",
+          "name": "Authorize a private or presence WebSocket channel",
           "request": {
-            "name": "Authorize a private WebSocket channel",
+            "name": "Authorize a private or presence WebSocket channel",
             "description": {
-              "content": "Called by Laravel Echo when subscribing. Channels:\n`private-tasks` (any signed-in user) and `private-tasks.{task}` (anyone who can view the task).\n",
+              "content": "Called by Laravel Echo when subscribing. Channels:\n`private-tasks` (any signed-in user), `private-tasks.{task}` (anyone who can view the task),\n`presence-online` (any signed-in user) and `presence-tasks.{task}.viewers` (anyone who can view the task).\nPresence responses also carry `channel_data`, the member's `{ id, name }`.\n",
               "type": "text/plain"
             },
             "url": {
@@ -1737,7 +1737,7 @@
     "name": "Task Management Platform API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {
-      "content": "REST API for the task management platform (Laravel 13).\n\n**Authentication.** Call `POST /auth/login` to get a JWT, then send it on every other request as\n`Authorization: Bearer <token>`. Tokens live for 60 minutes (`JWT_TTL`). `POST /auth/logout`\nblacklists the token.\n\n**Errors.** All errors are JSON with a `message`. Validation failures (422) also carry an `errors`\nobject keyed by field, each holding a list of messages.\n\n**Real-time.** Changes are broadcast over Laravel Reverb (Pusher protocol). Private channels are\nauthorized through `POST /broadcasting/auth`. See `documentation/architecture.md` for the channels\nand event payloads.\n",
+      "content": "REST API for the task management platform (Laravel 13).\n\n**Authentication.** Call `POST /auth/login` to get a JWT, then send it on every other request as\n`Authorization: Bearer <token>`. Tokens live for 60 minutes (`JWT_TTL`). `POST /auth/logout`\nblacklists the token.\n\n**Errors.** All errors are JSON with a `message`. Validation failures (422) also carry an `errors`\nobject keyed by field, each holding a list of messages.\n\n**Real-time.** Changes are broadcast over Laravel Reverb (Pusher protocol). Private and presence channels are\nauthorized through `POST /broadcasting/auth`. See `documentation/architecture.md` for the channels\nand event payloads.\n",
       "type": "text/plain"
     }
   }
