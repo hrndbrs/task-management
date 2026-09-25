@@ -6,6 +6,7 @@ use App\Contracts\VirusScanner;
 use App\Services\EicarVirusScanner;
 use App\Services\VideoTranscoder;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -31,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Model::preventLazyLoading(! $this->app->isProduction());
+
         RateLimiter::for('login', function ($request) {
             return Limit::perMinute(5)->by(Str::transliterate(
                 Str::lower($request->string('email')).'|'.$request->ip()
