@@ -14,6 +14,7 @@ import { AttachmentUploader } from "./attachment-uploader";
 import { DeleteTaskButton } from "./delete-task-button";
 import { ScanStatusRefresher } from "./scan-status-refresher";
 import { TaskComments } from "./task-comments";
+import { TaskViewers } from "./task-viewers";
 
 async function loadTask(id: string) {
   const taskId = Number(id);
@@ -56,6 +57,7 @@ export default async function TaskPage({ params }: PageProps<"/tasks/[id]">) {
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Created by {task.creator?.name ?? "unknown"}
         </p>
+        <TaskViewers taskId={task.id} currentUserId={currentUser.id} />
       </div>
 
       {task.can.update ? (

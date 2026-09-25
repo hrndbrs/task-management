@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
+import { OnlineUsers } from "@/components/online-users";
 import { requireUser } from "@/lib/dal";
 import { LiveTaskUpdates } from "./live-task-updates";
 
@@ -14,6 +15,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
             Tasks
           </Link>
           <div className="flex min-w-0 items-center gap-3 text-sm">
+            <OnlineUsers />
             <span className="truncate text-zinc-600 dark:text-zinc-400">
               {user.name}
               {user.role === "admin" && (

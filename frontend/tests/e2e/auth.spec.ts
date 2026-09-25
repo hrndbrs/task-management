@@ -23,7 +23,7 @@ test("returns to the requested page after sign-in and ends the session on logout
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/tasks\/new$/);
-  await expect(page.getByRole("banner").getByText(admin.name)).toBeVisible();
+  await expect(page.getByRole("banner").getByText(admin.name).last()).toBeVisible();
 
   await page.getByRole("button", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/login$/);
