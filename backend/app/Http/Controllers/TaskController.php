@@ -21,13 +21,7 @@ class TaskController extends Controller
     {
         $tasks = Task::query()
             ->with(['assignedUser', 'creator'])
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
-            ->when($request->filled('priority'), fn ($query) => $query->where('priority', $request->string('priority')))
-            ->when($request->filled('assigned_user_id'), fn ($query) => $query->where('assigned_user_id', $request->integer('assigned_user_id')))
-            ->when($request->filled('created_by'), fn ($query) => $query->where('created_by', $request->integer('created_by')))
-            ->when($request->filled('search'), fn ($query) => $query->where('title', 'like', '%'.$request->string('search').'%'))
-            ->orderBy($request->string('sort', 'created_at')->toString(), $request->string('direction', 'desc')->toString())
-            ->orderBy('id', $request->string('direction', 'desc')->toString())
+            ->filtered($request->validated())
             ->paginate($request->integer('per_page', 15));
 
         return TaskResource::collection($tasks);

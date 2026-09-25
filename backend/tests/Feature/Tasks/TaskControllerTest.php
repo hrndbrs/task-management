@@ -55,6 +55,30 @@ describe('index', function () {
         expect($response->json('data.0.id'))->toBe($high->id);
     });
 
+    it('sorts priority by severity rather than alphabetically', function () {
+        $token = actingAsToken(User::factory()->create());
+        foreach (['medium', 'urgent', 'low', 'high'] as $priority) {
+            Task::factory()->create(['priority' => $priority]);
+        }
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/tasks?sort=priority&direction=desc');
+
+        expect($response->json('data.*.priority'))->toBe(['urgent', 'high', 'medium', 'low']);
+    });
+
+    it('sorts status in workflow order rather than alphabetically', function () {
+        $token = actingAsToken(User::factory()->create());
+        foreach (['completed', 'cancelled', 'pending', 'in_progress'] as $status) {
+            Task::factory()->create(['status' => $status]);
+        }
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/tasks?sort=status&direction=asc');
+
+        expect($response->json('data.*.status'))->toBe(['pending', 'in_progress', 'completed', 'cancelled']);
+    });
+
     it('rejects an unsupported sort column', function () {
         $user = User::factory()->create();
         $token = actingAsToken($user);
