@@ -3,6 +3,7 @@ import { PriorityLabel, StatusBadge } from "@/components/task-badges";
 import { type TaskFilters, dashboardHref, hasActiveFilters, parseTaskFilters } from "@/lib/task-filters";
 import { formatDueDate, isOverdue } from "@/lib/task-labels";
 import { getTasks, getUsers } from "@/lib/tasks";
+import { ExportButton } from "./export-button";
 import { TaskFilterBar } from "./task-filter-bar";
 
 export default async function DashboardPage({ searchParams }: PageProps<"/">) {
@@ -22,12 +23,15 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             {filtering && (meta.total === 1 ? " matches your filters" : " match your filters")}
           </p>
         </div>
-        <Link
-          href="/tasks/new"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          New task
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton filters={filters} />
+          <Link
+            href="/tasks/new"
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            New task
+          </Link>
+        </div>
       </div>
 
       <TaskFilterBar filters={filters} users={users} />

@@ -49,6 +49,15 @@ export type Comment = {
   created_at: string;
 };
 
+export type ExportFormat = "csv" | "pdf";
+
+export type TaskExport = {
+  id: number;
+  format: ExportFormat;
+  status: "pending" | "processing" | "completed" | "failed";
+  row_count: number | null;
+};
+
 export type Paginated<T> = {
   data: T[];
   meta: {

@@ -25,6 +25,9 @@ describe("/api/[...path] proxy", () => {
     ["DELETE", DELETE, "tasks/1"],
     ["DELETE", DELETE, "attachments/1"],
     ["GET", GET, "attachments/../users/download"],
+    ["GET", GET, "exports"],
+    ["GET", GET, "exports/4"],
+    ["POST", POST, "exports"],
   ])("refuses %s %s", async (method, handler, path) => {
     const fetchMock = mockFetch();
 
@@ -73,6 +76,7 @@ describe("/api/[...path] proxy", () => {
     ["POST", POST, `uploads/${UPLOAD_ID}/complete`],
     ["DELETE", DELETE, `uploads/${UPLOAD_ID}`],
     ["GET", GET, "attachments/3/thumbnail"],
+    ["GET", GET, "exports/4/download"],
   ])("forwards %s %s", async (method, handler, path) => {
     const fetchMock = mockFetch(json(200, {}));
 
