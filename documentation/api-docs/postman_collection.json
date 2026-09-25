@@ -1,0 +1,1686 @@
+{
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Log in, log out and read the current user.",
+      "item": [
+        {
+          "id": "ae886a4f-824d-4375-a41c-2fbee91a9335",
+          "name": "Log in and receive a JWT",
+          "request": {
+            "name": "Log in and receive a JWT",
+            "description": {
+              "content": "Rate limited to 5 attempts per minute per email and IP address.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "auth",
+                "login"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('logged in', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('bearerToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "5b5caa33-e9bd-471c-a9ca-54bf8384f5d4",
+          "name": "Get the signed-in user",
+          "request": {
+            "name": "Get the signed-in user",
+            "description": {},
+            "url": {
+              "path": [
+                "auth",
+                "me"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "26677dab-e210-4821-a298-aa67a8d583c6",
+          "name": "Log out and invalidate the token",
+          "request": {
+            "name": "Log out and invalidate the token",
+            "description": {},
+            "url": {
+              "path": [
+                "auth",
+                "logout"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "People who can be assigned tasks.",
+      "item": [
+        {
+          "id": "8f23bb27-8b9e-467c-bc42-8c8ad5708d10",
+          "name": "List all users",
+          "request": {
+            "name": "List all users",
+            "description": {
+              "content": "Sorted by name. Used to pick an assignee.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "users"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "description": "Create, read, update, delete and list tasks.",
+      "item": [
+        {
+          "id": "32f261ee-f3f3-45d2-a248-a92308afcdf9",
+          "name": "List tasks",
+          "request": {
+            "name": "List tasks",
+            "description": {
+              "content": "Paginated, filterable and sortable. Attachments are not included in list items.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": " (This can only be one of pending,in_progress,completed,cancelled)",
+                    "type": "text/plain"
+                  },
+                  "key": "status",
+                  "value": "in_progress"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": " (This can only be one of low,medium,high,urgent)",
+                    "type": "text/plain"
+                  },
+                  "key": "priority",
+                  "value": "medium"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "assigned_user_id",
+                  "value": "<integer>"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "created_by",
+                  "value": "<integer>"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "Case-insensitive substring match on the title.",
+                    "type": "text/plain"
+                  },
+                  "key": "search",
+                  "value": "<string>"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "Status and priority sort by their logical order (pending \u2192 cancelled, low \u2192 urgent), not alphabetically. (This can only be one of title,status,priority,due_date,created_at)",
+                    "type": "text/plain"
+                  },
+                  "key": "sort",
+                  "value": "created_at"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": " (This can only be one of asc,desc)",
+                    "type": "text/plain"
+                  },
+                  "key": "direction",
+                  "value": "desc"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "bf09deac-7379-40c1-9717-7cc87d5525a2",
+          "name": "Create a task",
+          "request": {
+            "name": "Create a task",
+            "description": {
+              "content": "The signed-in user becomes the creator. If the task is assigned to someone else, they are emailed (queued).",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"<string>\",\n  \"description\": \"<string,null>\",\n  \"status\": \"in_progress\",\n  \"priority\": \"urgent\",\n  \"assigned_user_id\": \"<integer,null>\",\n  \"due_date\": \"<string,null-date>\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "34c640d2-df38-4611-873c-764b65cb48d0",
+          "name": "Get a task with its attachments",
+          "request": {
+            "name": "Get a task with its attachments",
+            "description": {
+              "content": "Includes the latest version of each attachment, oldest upload first.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "a078c802-442c-4534-b4f1-7fdc543cf673",
+          "name": "Update a task",
+          "request": {
+            "name": "Update a task",
+            "description": {
+              "content": "Allowed for admins, the creator and the assignee. Only the fields sent are changed.\nChanging the assignee emails the new assignee (queued). `PATCH` behaves the same.\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"<string>\",\n  \"description\": \"<string,null>\",\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"assigned_user_id\": \"<integer,null>\",\n  \"due_date\": \"<string,null-date>\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "fe49c227-98af-4955-a3df-50fa30698933",
+          "name": "Delete a task",
+          "request": {
+            "name": "Delete a task",
+            "description": {
+              "content": "Allowed for admins and the creator. Also deletes its comments, attachments (all versions, with their files) and unfinished chunked uploads.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "DELETE",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bulk operations",
+      "description": "Queued status changes across many tasks.",
+      "item": [
+        {
+          "id": "010655f5-a837-477c-9b73-1e7c0ad50ee2",
+          "name": "Change the status of many tasks in the background",
+          "request": {
+            "name": "Change the status of many tasks in the background",
+            "description": {
+              "content": "Queues the update as a job batch (100 tasks per job) and returns immediately with the batch\nto poll. The user must be allowed to update every task, otherwise nothing is queued.\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                "bulk-status"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task_ids\": [\n    \"<integer>\"\n  ],\n  \"status\": \"in_progress\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "d56027da-a6c3-4795-b338-2032d0447021",
+          "name": "Check a bulk status update",
+          "request": {
+            "name": "Check a bulk status update",
+            "description": {
+              "content": "Only the user who started the batch can see it; anyone else gets 404.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                "bulk-status",
+                ":batchId"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "key": "batchId",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "description": "Discussion on a task, broadcast live.",
+      "item": [
+        {
+          "id": "45548b83-5311-49b4-9424-f86702c56369",
+          "name": "List a task's comments",
+          "request": {
+            "name": "List a task's comments",
+            "description": {
+              "content": "Oldest first, with each author.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task",
+                "comments"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "900eeca1-17cb-4650-a075-862ebd7eda44",
+          "name": "Comment on a task",
+          "request": {
+            "name": "Comment on a task",
+            "description": {
+              "content": "Any signed-in user can comment. Surrounding whitespace is trimmed. Broadcasts\n`comment.posted` on `private-tasks.{task}`. Rate limited to 30 comments per minute.\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task",
+                "comments"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"<string>\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "444ad041-9194-483b-8422-0a89fc3c509c",
+          "name": "Delete a comment",
+          "request": {
+            "name": "Delete a comment",
+            "description": {
+              "content": "Allowed for the author and admins. Broadcasts `comment.deleted` on `private-tasks.{task}`.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "comments",
+                ":comment"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "comment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "DELETE",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attachments",
+      "description": "Files on a task: upload, download, thumbnails and delete.",
+      "item": [
+        {
+          "id": "c9f01a01-04ba-4a1b-b438-893a1497edbb",
+          "name": "Upload a file to a task",
+          "request": {
+            "name": "Upload a file to a task",
+            "description": {
+              "content": "Allowed for users who can update the task. Files up to 50 MB; larger files use the\nchunked upload endpoints. The file type is checked from its content, not only its name.\n\nThe new attachment starts with `scan_status: pending`. A queued virus scan then marks it\n`clean` (and queues a thumbnail for images) or `infected` (and deletes the file).\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task",
+                "attachments"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "description": {
+                    "content": "(Required) Max 50 MB. Allowed: jpg, jpeg, png, gif, webp, pdf, doc, docx, xls, xlsx, ppt, pptx, txt, csv, mp4, webm, mov.",
+                    "type": "text/plain"
+                  },
+                  "key": "file",
+                  "type": "file"
+                }
+              ]
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "9bb6e62e-1d76-4df3-aa6a-78d9af1de087",
+          "name": "Download a file",
+          "request": {
+            "name": "Download a file",
+            "description": {},
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment",
+                "download"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/octet-stream"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "bac6beb4-3fef-4305-b97d-94413119698a",
+          "name": "Get an image attachment's thumbnail",
+          "request": {
+            "name": "Get an image attachment's thumbnail",
+            "description": {
+              "content": "A WebP image scaled to fit 300\u00d7300. Only exists for clean images.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment",
+                "thumbnail"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "image/webp"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "50311ae1-6200-46ad-bc9b-f5b2c1032eb0",
+          "name": "Delete a file and all its versions",
+          "request": {
+            "name": "Delete a file and all its versions",
+            "description": {
+              "content": "Allowed for users who can update the task.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "DELETE",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attachment versions",
+      "description": "Earlier versions of a file, and restoring them.",
+      "item": [
+        {
+          "id": "0760c7a8-9d27-4aa5-a208-b0bc88518a2d",
+          "name": "List every version of a file",
+          "request": {
+            "name": "List every version of a file",
+            "description": {
+              "content": "Newest version first. Pass the id of any version.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment",
+                "versions"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "d7d7b015-f321-4c64-8ee7-ca332338bd7c",
+          "name": "Upload a new version of a file",
+          "request": {
+            "name": "Upload a new version of a file",
+            "description": {
+              "content": "Same rules as a normal upload. The new version gets the next version number and is scanned like any upload.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment",
+                "versions"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  },
+                  "key": "file",
+                  "type": "file"
+                }
+              ]
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "91dd228a-79c1-4bd4-ae3b-9ea0c960f108",
+          "name": "Restore an older version",
+          "request": {
+            "name": "Restore an older version",
+            "description": {
+              "content": "Creates a new latest version with the same file as the given version. Only versions that passed the virus scan can be restored.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "attachments",
+                ":attachment",
+                "restore"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "attachment",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chunked uploads",
+      "description": "Uploading files over 50 MB in 5 MB pieces.",
+      "item": [
+        {
+          "id": "cff2bcfe-5f5d-43a8-bae3-b6bfd1cdd58f",
+          "name": "Start a chunked upload",
+          "request": {
+            "name": "Start a chunked upload",
+            "description": {
+              "content": "For files over 50 MB (up to 2 GB). The response says how big each chunk must be and how many\nto send. Send every chunk to `POST /uploads/{upload}/chunks/{index}`, then call\n`POST /uploads/{upload}/complete`. Unfinished uploads expire after 24 hours.\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "tasks",
+                ":task",
+                "attachments",
+                "uploads"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "task",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_name\": \"<string>\",\n  \"file_size\": \"<integer>\",\n  \"attachment_id\": \"<integer,null>\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "7777abf3-b65e-4def-b137-55c1c6d4b282",
+          "name": "Check which chunks have arrived",
+          "request": {
+            "name": "Check which chunks have arrived",
+            "description": {
+              "content": "Only the user who started the upload can see it. Use `received_chunks` to resume an interrupted upload.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "uploads",
+                ":upload"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "key": "upload",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "fa572fec-1777-4588-8f78-753ebcbc13ac",
+          "name": "Cancel a chunked upload",
+          "request": {
+            "name": "Cancel a chunked upload",
+            "description": {
+              "content": "Deletes the stored chunks.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "uploads",
+                ":upload"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "key": "upload",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "DELETE",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "f76690f2-523c-4bb1-a660-e3a575de5030",
+          "name": "Send one chunk",
+          "request": {
+            "name": "Send one chunk",
+            "description": {
+              "content": "Chunks can be sent in any order and resent. Every chunk must be exactly `chunk_size` bytes, except the last, which holds the remainder.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "uploads",
+                ":upload",
+                "chunks",
+                ":index"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "key": "upload",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                },
+                {
+                  "type": "any",
+                  "value": "0",
+                  "key": "index",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) Zero-based, below total_chunks.",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  },
+                  "key": "chunk",
+                  "type": "file"
+                }
+              ]
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "8cbe4054-428c-47bc-baa4-ae304dadb0db",
+          "name": "Assemble the chunks into an attachment",
+          "request": {
+            "name": "Assemble the chunks into an attachment",
+            "description": {
+              "content": "Checks that every chunk arrived and that the assembled file's content is an allowed type, then creates the attachment (queued for a virus scan like any upload).",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "uploads",
+                ":upload",
+                "complete"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "key": "upload",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exports",
+      "description": "Queued CSV and PDF reports of tasks.",
+      "item": [
+        {
+          "id": "2d9d3b64-9604-425d-80ff-d590aa015563",
+          "name": "List your exports",
+          "request": {
+            "name": "List your exports",
+            "description": {
+              "content": "Newest first, 15 per page. Exports are deleted after 7 days.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "exports"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "",
+                    "type": "text/plain"
+                  },
+                  "key": "page",
+                  "value": "1"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "9ace6497-cc3f-4c56-aa82-c51fc877e083",
+          "name": "Request a CSV or PDF export of tasks",
+          "request": {
+            "name": "Request a CSV or PDF export of tasks",
+            "description": {
+              "content": "Generated in the background. Accepts the same filters and sort as `GET /tasks` (except\n`per_page`). Poll `GET /exports/{export}` until `status` is `completed`. PDF exports are\nlimited to 2000 tasks.\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "exports"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pdf\",\n  \"status\": \"pending\",\n  \"priority\": \"low\",\n  \"assigned_user_id\": \"<integer>\",\n  \"created_by\": \"<integer>\",\n  \"search\": \"<string>\",\n  \"sort\": \"priority\",\n  \"direction\": \"asc\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "f7ecc286-1ec8-4204-a595-848e9998ea47",
+          "name": "Check an export",
+          "request": {
+            "name": "Check an export",
+            "description": {
+              "content": "Only the user who requested it can see it; anyone else gets 404.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "exports",
+                ":export"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "export",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        },
+        {
+          "id": "e976e17c-33a0-403f-aa29-3c5b8e8a46c1",
+          "name": "Download a finished export",
+          "request": {
+            "name": "Download a finished export",
+            "description": {},
+            "url": {
+              "path": [
+                "exports",
+                ":export",
+                "download"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "type": "any",
+                  "value": "1",
+                  "key": "export",
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  }
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "method": "GET",
+            "body": {},
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Broadcasting",
+      "description": "Authorizing private WebSocket channels.",
+      "item": [
+        {
+          "id": "7fcc8e90-c53d-4e8b-8a13-1139577d9a54",
+          "name": "Authorize a private WebSocket channel",
+          "request": {
+            "name": "Authorize a private WebSocket channel",
+            "description": {
+              "content": "Called by Laravel Echo when subscribing. Channels:\n`private-tasks` (any signed-in user) and `private-tasks.{task}` (anyone who can view the task).\n",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "broadcasting",
+                "auth"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  },
+                  "key": "socket_id",
+                  "value": "<string>"
+                },
+                {
+                  "disabled": false,
+                  "description": {
+                    "content": "(Required) ",
+                    "type": "text/plain"
+                  },
+                  "key": "channel_name",
+                  "value": "<string>"
+                }
+              ]
+            },
+            "auth": null
+          },
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "type": "any",
+        "value": "{{bearerToken}}",
+        "key": "token"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "key": "bearerToken",
+      "value": ""
+    }
+  ],
+  "info": {
+    "_postman_id": "70e18321-3627-4e33-aee1-ef6a698fddc8",
+    "name": "Task Management Platform API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": {
+      "content": "REST API for the task management platform (Laravel 13).\n\n**Authentication.** Call `POST /auth/login` to get a JWT, then send it on every other request as\n`Authorization: Bearer <token>`. Tokens live for 60 minutes (`JWT_TTL`). `POST /auth/logout`\nblacklists the token.\n\n**Errors.** All errors are JSON with a `message`. Validation failures (422) also carry an `errors`\nobject keyed by field, each holding a list of messages.\n\n**Real-time.** Changes are broadcast over Laravel Reverb (Pusher protocol). Private channels are\nauthorized through `POST /broadcasting/auth`. See `documentation/architecture.md` for the channels\nand event payloads.\n",
+      "type": "text/plain"
+    }
+  }
+}
