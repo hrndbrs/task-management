@@ -61,11 +61,17 @@ class TaskController extends Controller
     {
         Gate::authorize('delete', $task);
 
-        // Attachment rows cascade in the DB, but their files must be removed explicitly.
+        // Attachment and upload rows cascade in the DB, but their files must be removed explicitly.
         $paths = $task->attachments->flatMap->storedPaths()->all();
+        $chunkDirectories = $task->chunkedUploads->map->chunkDirectory()->all();
 
         $task->delete();
-        Storage::disk(config('attachments.disk'))->delete($paths);
+
+        $disk = Storage::disk(config('attachments.disk'));
+        $disk->delete($paths);
+        foreach ($chunkDirectories as $directory) {
+            $disk->deleteDirectory($directory);
+        }
 
         return response()->noContent();
     }

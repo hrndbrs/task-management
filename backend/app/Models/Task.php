@@ -45,4 +45,9 @@ class Task extends Model
     {
         return $this->hasMany(TaskComment::class);
     }
+
+    public function chunkedUploads(): HasMany
+    {
+        return $this->hasMany(ChunkedUpload::class);
+    }
 }
