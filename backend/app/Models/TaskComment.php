@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Events\TaskCommentDeleted;
+use App\Events\TaskCommentPosted;
 use Database\Factories\TaskCommentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +17,12 @@ class TaskComment extends Model
     use HasFactory;
 
     const UPDATED_AT = null;
+
+    protected static function booted(): void
+    {
+        static::created(fn (TaskComment $comment) => TaskCommentPosted::dispatch($comment));
+        static::deleted(fn (TaskComment $comment) => TaskCommentDeleted::dispatch($comment->task_id, $comment->id));
+    }
 
     public function task(): BelongsTo
     {

@@ -6,6 +6,7 @@ use App\Http\Controllers\BulkTaskStatusController;
 use App\Http\Controllers\ChunkedUploadController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\TaskAttachmentController;
+use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('tasks/bulk-status/{batchId}', [BulkTaskStatusController::class, 'show'])->whereUuid('batchId')->name('tasks.bulk-status.show');
 
     Route::apiResource('tasks', TaskController::class);
+
+    Route::get('tasks/{task}/comments', [TaskCommentController::class, 'index'])->name('tasks.comments.index');
+    Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store'])->middleware('throttle:30,1')->name('tasks.comments.store');
+    Route::delete('comments/{comment}', [TaskCommentController::class, 'destroy'])->name('comments.destroy');
 
     Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
     Route::post('exports', [ExportController::class, 'store'])->name('exports.store');

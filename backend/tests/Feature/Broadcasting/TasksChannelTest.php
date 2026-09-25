@@ -1,8 +1,11 @@
 <?php
 
+use App\Events\TasksChanged;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
@@ -41,4 +44,18 @@ it('returns 403 for a channel that is not defined', function () {
     $this->actingAs(User::factory()->create(), 'api');
 
     authorizeChannel('private-secrets')->assertStatus(403);
+});
+
+it('authorizes a signed-in user for a task\'s channel', function () {
+    Event::fake([TasksChanged::class]);
+    $this->actingAs(User::factory()->create(), 'api');
+    $task = Task::factory()->create();
+
+    authorizeChannel("private-tasks.{$task->id}")->assertOk();
+});
+
+it('refuses the channel of a task that does not exist', function () {
+    $this->actingAs(User::factory()->create(), 'api');
+
+    authorizeChannel('private-tasks.999')->assertStatus(403);
 });
