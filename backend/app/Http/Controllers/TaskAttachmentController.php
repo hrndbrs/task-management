@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTaskAttachmentRequest;
 use App\Http\Resources\TaskAttachmentResource;
+use App\Jobs\GenerateAttachmentThumbnail;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +27,10 @@ class TaskAttachmentController extends Controller
             'mime_type' => $file->getMimeType(),
         ]);
 
+        if ($attachment->isImage()) {
+            GenerateAttachmentThumbnail::dispatch($attachment);
+        }
+
         return TaskAttachmentResource::make($attachment)
             ->response()
             ->setStatusCode(201);
@@ -39,12 +44,21 @@ class TaskAttachmentController extends Controller
             ->download($attachment->file_path, $attachment->file_name);
     }
 
+    public function thumbnail(TaskAttachment $attachment): StreamedResponse
+    {
+        Gate::authorize('view', $attachment->task);
+
+        abort_if($attachment->thumbnail_path === null, 404);
+
+        return Storage::disk(config('attachments.disk'))->response($attachment->thumbnail_path);
+    }
+
     public function destroy(TaskAttachment $attachment): Response
     {
         Gate::authorize('update', $attachment->task);
 
         $attachment->delete();
-        Storage::disk(config('attachments.disk'))->delete($attachment->file_path);
+        Storage::disk(config('attachments.disk'))->delete($attachment->storedPaths());
 
         return response()->noContent();
     }

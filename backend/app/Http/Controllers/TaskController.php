@@ -62,7 +62,7 @@ class TaskController extends Controller
         Gate::authorize('delete', $task);
 
         // Attachment rows cascade in the DB, but their files must be removed explicitly.
-        $paths = $task->attachments()->pluck('file_path')->all();
+        $paths = $task->attachments->flatMap->storedPaths()->all();
 
         $task->delete();
         Storage::disk(config('attachments.disk'))->delete($paths);

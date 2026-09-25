@@ -19,5 +19,6 @@ Route::middleware('auth:api')->group(function () {
 
     Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
     Route::get('attachments/{attachment}/download', [TaskAttachmentController::class, 'download'])->name('attachments.download');
+    Route::get('attachments/{attachment}/thumbnail', [TaskAttachmentController::class, 'thumbnail'])->name('attachments.thumbnail');
     Route::delete('attachments/{attachment}', [TaskAttachmentController::class, 'destroy'])->name('attachments.destroy');
 });
