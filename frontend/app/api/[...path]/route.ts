@@ -2,7 +2,11 @@ import { apiFetch } from "@/lib/api";
 import { getToken } from "@/lib/session";
 
 const ALLOWED: Record<string, RegExp[]> = {
-  GET: [/^attachments\/\d+\/(download|thumbnail)$/, /^exports\/\d+\/download$/],
+  GET: [
+    /^attachments\/\d+\/(download|thumbnail)$/,
+    /^attachments\/\d+\/stream\/(master\.m3u8|stream_\d+\/(index\.m3u8|seg_\d+\.ts))$/,
+    /^exports\/\d+\/download$/,
+  ],
   POST: [
     /^tasks\/\d+\/attachments(\/uploads)?$/,
     /^uploads\/[0-9a-f-]{36}\/(chunks\/\d+|complete)$/,

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { updateTask } from "@/app/actions/tasks";
 import { PriorityLabel, StatusBadge } from "@/components/task-badges";
 import { formatDueDate } from "@/lib/task-labels";
+import { hasProcessingFiles } from "@/lib/attachments";
 import { requireUser } from "@/lib/dal";
 import { getComments, getTask, getUsers } from "@/lib/tasks";
 import type { Task } from "@/lib/types";
@@ -75,7 +76,7 @@ export default async function TaskPage({ params }: PageProps<"/tasks/[id]">) {
         </h2>
         <AttachmentList attachments={attachments} canDelete={task.can.update} />
         {task.can.update && <AttachmentUploader taskId={task.id} />}
-        <ScanStatusRefresher pending={attachments.some((a) => a.scan_status === "pending")} />
+        <ScanStatusRefresher pending={hasProcessingFiles(attachments)} />
       </section>
 
       <section aria-labelledby="comments-heading" className="space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">

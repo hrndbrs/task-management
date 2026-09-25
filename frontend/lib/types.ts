@@ -39,6 +39,9 @@ export type Attachment = {
   scanned_at: string | null;
   uploaded_at: string;
   thumbnail_url: string | null;
+  stream_status: "pending" | "ready" | "failed" | null;
+  stream_url: string | null;
+  duration: number | null;
 };
 
 export type Comment = {
