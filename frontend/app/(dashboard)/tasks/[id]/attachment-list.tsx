@@ -1,10 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { Attachment } from "@/lib/types";
 import { formatBytes } from "@/lib/upload";
 import { DeleteAttachmentButton } from "./delete-attachment-button";
-import { VideoPlayer } from "./video-player";
+
+const VideoPlayer = dynamic(() => import("./video-player").then((module) => module.VideoPlayer), {
+  ssr: false,
+  loading: () => <div aria-hidden className="aspect-video w-full rounded-md bg-black" />,
+});
 
 export function AttachmentList({
   attachments,
@@ -82,6 +87,10 @@ function Preview({ attachment }: { attachment: Attachment }) {
       <img
         src={`/api/attachments/${attachment.id}/thumbnail`}
         alt=""
+        width={40}
+        height={40}
+        loading="lazy"
+        decoding="async"
         className="size-10 shrink-0 rounded object-cover"
       />
     );

@@ -71,10 +71,12 @@ describe("AttachmentList", () => {
       />,
     );
 
-    expect(screen.getByRole("listitem").querySelector("img")).toHaveAttribute(
-      "src",
-      "/api/attachments/7/thumbnail",
-    );
+    const image = screen.getByRole("listitem").querySelector("img");
+    expect(image).toHaveAttribute("src", "/api/attachments/7/thumbnail");
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("decoding", "async");
+    expect(image).toHaveAttribute("width", "40");
+    expect(image).toHaveAttribute("height", "40");
   });
 
   it("shows the file type instead of a thumbnail until the image is clean", () => {
@@ -124,7 +126,7 @@ describe("AttachmentList", () => {
 
       await user.click(screen.getByRole("button", { name: "Play walkthrough.mp4" }));
 
-      const player = screen.getByTestId("player");
+      const player = await screen.findByTestId("player");
       expect(player).toHaveAttribute("data-src", "/api/attachments/7/stream/master.m3u8");
       expect(player).toHaveAttribute("data-poster", "/api/attachments/7/thumbnail");
       expect(screen.getByRole("button", { name: "Close walkthrough.mp4" })).toHaveAttribute("aria-expanded", "true");
