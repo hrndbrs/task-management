@@ -1,170 +1,132 @@
 # Deployment Guide
 
-How to run the platform in production on a single Linux server (Ubuntu 24.04 in the examples) with Nginx, Supervisor and MySQL. The same pieces map directly onto managed platforms; see the end of this guide.
+How to run the platform in production with Docker Compose on a single host. Everything, including MySQL and Redis, runs in containers:
 
-## What runs in production
+| File                  | Purpose                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `docker-compose.yml`  | The five services, their volumes and configuration                                                    |
+| `.env.example`        | Every setting Compose reads; copy it to `.env`                                                        |
+| `backend/Dockerfile`  | PHP 8.4 FPM with the Laravel app, its extensions, ffmpeg and Supervisor                               |
+| `backend/docker/`     | `php.ini` overrides, `supervisord.conf`, the startup script, and `nginx.conf` for the `nginx` service |
+| `frontend/Dockerfile` | The Next.js app built as a standalone Node server                                                     |
 
-| Process             | Command                                        | Listens on       | Public?                                         |
-| ------------------- | ---------------------------------------------- | ---------------- | ----------------------------------------------- |
-| Next.js frontend    | `npm run start`                                | `127.0.0.1:3000` | Yes, through Nginx at `https://app.example.com` |
-| Laravel API         | PHP-FPM behind Nginx                           | `127.0.0.1:8000` | **No.** Only the Next.js server calls it        |
-| Queue worker        | `php artisan queue:work`                       |                  |                                                 |
-| Reverb (WebSockets) | `php artisan reverb:start`                     | `127.0.0.1:8080` | Yes, through Nginx at `wss://ws.example.com`    |
-| Scheduler           | `php artisan schedule:run` every minute (cron) |                  |                                                 |
-| MySQL 8+            |                                                | `127.0.0.1:3306` | No                                              |
-| Redis               | `redis-server`                                 | `127.0.0.1:6379` | No                                              |
+## What runs
 
-The browser only ever talks to the Next.js app and to Reverb. Every API call, including file uploads and downloads, goes through the Next.js server, which attaches the user's token (see [architecture.md](architecture.md), decisions 2 and 5). So the Laravel API can stay on a private address, which removes a whole attack surface.
+| Service    | Image                 | Does                                                                                                       | Published port  |
+| ---------- | --------------------- | ---------------------------------------------------------------------------------------------------------- | --------------- |
+| `frontend` | `frontend/Dockerfile` | Next.js server. The only thing the browser loads pages from                                                | `APP_PORT` 3000 |
+| `nginx`    | `nginx:1.27-alpine`   | Takes HTTP requests for the API and passes them to PHP-FPM in `backend` over FastCGI                       | `API_PORT` 8000 |
+| `backend`  | `backend/Dockerfile`  | Supervisor runs four processes: PHP-FPM (the API), the queue worker, the scheduler and Reverb (WebSockets) | `WS_PORT` 8080  |
+| `db`       | `mysql:8.4`           | Database                                                                                                   | None            |
+| `redis`    | `redis:7-alpine`      | Cache: task and user lists, rate limits, JWT blacklist                                                     | None            |
 
 ```mermaid
 flowchart LR
-    Browser -- "HTTPS" --> Nginx
-    Browser -- "WSS" --> Nginx
-    Nginx -- "app.example.com" --> Next["Next.js :3000"]
-    Nginx -- "ws.example.com" --> Reverb["Reverb :8080"]
-    Next -- "HTTP, private" --> API["Laravel API :8000"]
-    API --> MySQL[(MySQL)]
-    API --> Redis[(Redis)]
-    Worker["Queue worker"] --> MySQL
-    Worker -- "drop cached lists" --> Redis
+    Browser -- "HTTP :3000" --> Frontend["frontend"]
+    Browser -- "WebSocket :8080" --> Reverb
+    Frontend -- "http://nginx/api" --> Nginx["nginx :8000"]
+    subgraph Backend["backend"]
+        FPM["PHP-FPM :9000"]
+        Worker["queue worker"]
+        Scheduler["scheduler"]
+        Reverb["Reverb :8080"]
+    end
+    Nginx -- "FastCGI" --> FPM
+    FPM --> DB[(db)]
+    FPM --> Redis[(redis)]
+    Worker --> DB
+    FPM -- "broadcast" --> Reverb
     Worker -- "broadcast" --> Reverb
-    API -- "broadcast" --> Reverb
 ```
 
-## 1. Server requirements
+Pages, uploads and downloads go browser → `frontend` → `nginx` → `backend`, with the Next.js server attaching the user's token (see [architecture.md](architecture.md), decisions 2 and 5). The API port is published too, for tools like Postman and the E2E tests; the browser doesn't need it.
 
-- PHP 8.3+ with FPM and the `pdo_mysql`, `gd`, `mbstring`, `fileinfo`, `openssl`, `intl` extensions
-- Composer 2, Node.js 20.9+, MySQL 8+, Redis, Nginx, Supervisor, Certbot (TLS)
-- The `redis` PHP extension (`apt install php8.3-redis`) for both FPM and CLI
-- `ffmpeg` and `ffprobe` (`apt install ffmpeg`) on the server that runs the queue worker, for video streaming
-- Two DNS names pointing at the server, for example `app.example.com` and `ws.example.com`
+On start, `backend` waits for `db` and `redis` to be healthy, caches its configuration (`php artisan optimize`), applies migrations (`php artisan migrate --force`), then starts its four processes. `frontend` starts once `nginx` answers `/up`.
 
-Set PHP's upload limits in **both** the FPM and CLI `php.ini`:
+## 1. Requirements
 
-```ini
-upload_max_filesize = 50M
-post_max_size = 50M
-```
+- Docker Engine 24+ with the Compose plugin (`docker compose version`)
+- About 2 GB of RAM, and disk for uploaded files and video renditions
+- For a public deployment: two DNS names (for example `app.example.com` and `ws.example.com`) and a reverse proxy with TLS on the host (section 5)
 
-## 2. Database
-
-```sql
-CREATE DATABASE transcosmos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'transcosmos'@'localhost' IDENTIFIED BY 'a-long-random-password';
-GRANT ALL PRIVILEGES ON transcosmos.* TO 'transcosmos'@'localhost';
-```
-
-## 3. Backend
+## 2. Configure
 
 ```bash
-cd /var/www/transcosmos/backend
-composer install --no-dev --optimize-autoloader
 cp .env.example .env
-php artisan key:generate
-php artisan jwt:secret --force
 ```
 
-Production `.env` values (everything else can stay at its default):
+Generate the secrets and paste the output into `.env`:
+
+```bash
+echo "APP_KEY=base64:$(openssl rand -base64 32)"
+echo "JWT_SECRET=$(openssl rand -hex 32)"
+echo "DB_PASSWORD=$(openssl rand -hex 16)"
+echo "DB_ROOT_PASSWORD=$(openssl rand -hex 16)"
+echo "REVERB_APP_ID=$(openssl rand -hex 4)"
+echo "REVERB_APP_KEY=$(openssl rand -hex 16)"
+echo "REVERB_APP_SECRET=$(openssl rand -hex 16)"
+```
+
+Compose refuses to start while any of these is empty.
+
+| Variable                                                           | Default                     | Meaning                                                                                       |
+| ------------------------------------------------------------------ | --------------------------- | --------------------------------------------------------------------------------------------- |
+| `APP_PORT`, `API_PORT`, `WS_PORT`                                  | `3000`, `8000`, `8080`      | Host ports for the frontend, the API and Reverb. `127.0.0.1:3000` publishes on localhost only |
+| `FRONTEND_URL`                                                     | `http://localhost:3000`     | Public URL of the app, used in assignment emails                                              |
+| `APP_URL`                                                          | `http://localhost:8000`     | Public URL of the API                                                                         |
+| `APP_KEY`, `JWT_SECRET`                                            |                             | Laravel encryption key and JWT signing secret                                                 |
+| `DB_DATABASE`, `DB_USERNAME`                                       | `transcosmos`               | Database and user created on the first start                                                  |
+| `DB_PASSWORD`, `DB_ROOT_PASSWORD`                                  |                             | MySQL passwords                                                                               |
+| `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`             |                             | Reverb credentials. The key is also built into the frontend                                   |
+| `REVERB_PUBLIC_HOST`, `REVERB_PUBLIC_PORT`, `REVERB_PUBLIC_SCHEME` | `localhost`, `8080`, `http` | Where the **browser** opens its WebSocket. Built into the frontend                            |
+| `MAIL_*`                                                           | `MAIL_MAILER=log`           | SMTP settings for assignment emails. With `log`, emails are written to the backend's log      |
+
+`REVERB_APP_KEY` and the `REVERB_PUBLIC_*` values are compiled into the browser JavaScript. After changing them, rebuild the frontend: `docker compose up -d --build frontend`.
+
+## 3. Build and start
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+The first build takes a few minutes. When it's done, `db`, `redis` and `nginx` show `healthy`, and the app is at `http://localhost:3000`.
+
+## 4. Users
+
+The database starts empty and the app has no sign-up, so accounts are created on the command line. Create the first admin:
+
+```bash
+docker compose exec backend php artisan user:create
+```
+
+It asks for the name, email, role (`admin` or `member`) and a password (at least 8 characters, typed hidden and confirmed), then the user can sign in. Name, email and role can also be passed as options, which is handy for adding team members:
+
+```bash
+docker compose exec backend php artisan user:create --name="Ada Lovelace" --email=ada@example.com --role=member
+```
+
+The password is always prompted, so it never ends up in shell history.
+
+## 5. HTTPS and public access
+
+Keep the published ports on localhost and put a reverse proxy with TLS in front. In `.env`:
 
 ```ini
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=http://127.0.0.1:8000
+APP_PORT=127.0.0.1:3000
+API_PORT=127.0.0.1:8000
+WS_PORT=127.0.0.1:8080
 FRONTEND_URL=https://app.example.com
-
-DB_DATABASE=transcosmos
-DB_USERNAME=transcosmos
-DB_PASSWORD=a-long-random-password
-
-QUEUE_CONNECTION=database
-BROADCAST_CONNECTION=reverb
-
-# Cache (task and user lists, rate limits, JWT blacklist)
-CACHE_STORE=redis
-REDIS_HOST=127.0.0.1
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-
-# Reverb app credentials: random strings (see setup-guide.md)
-REVERB_APP_ID=...
-REVERB_APP_KEY=...
-REVERB_APP_SECRET=...
-# Where Reverb itself listens (behind Nginx)
-REVERB_SERVER_HOST=127.0.0.1
-REVERB_SERVER_PORT=8080
-# Where Laravel sends events to Reverb: the internal address
-REVERB_HOST=127.0.0.1
-REVERB_PORT=8080
-REVERB_SCHEME=http
-
-# Real email delivery for task assignment notifications
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.your-provider.com
-MAIL_PORT=587
-MAIL_USERNAME=...
-MAIL_PASSWORD=...
-MAIL_FROM_ADDRESS=tasks@example.com
+REVERB_PUBLIC_HOST=ws.example.com
+REVERB_PUBLIC_PORT=443
+REVERB_PUBLIC_SCHEME=https
 ```
 
-> **`APP_DEBUG` must be `false`.** With it on, any error returns a full stack trace and file paths to the caller.
+Then `docker compose up -d --build`.
 
-Then:
-
-```bash
-php artisan migrate --force
-php artisan optimize          # caches config, routes, events and views
-```
-
-Only run `php artisan db:seed` if you want the demo data. It creates `admin@example.com` with the password `password`.
-
-Make `storage/` and `bootstrap/cache/` writable by the web server user (for example `chown -R www-data:www-data storage bootstrap/cache`).
-
-**Uploaded files** are stored in `backend/storage/app/private`. Keep that directory on persistent storage and include it in backups. To use S3 instead, run `composer require league/flysystem-aws-s3-v3`, fill in the `AWS_*` variables, and set `ATTACHMENTS_DISK=s3` and `EXPORTS_DISK=s3`.
-
-## 4. Frontend
-
-`NEXT_PUBLIC_*` variables are **built into the JavaScript**, so set them before building:
-
-```bash
-cd /var/www/transcosmos/frontend
-cat > .env.production.local <<'EOF'
-API_URL=http://127.0.0.1:8000/api
-NEXT_PUBLIC_REVERB_APP_KEY=<same as REVERB_APP_KEY>
-NEXT_PUBLIC_REVERB_HOST=ws.example.com
-NEXT_PUBLIC_REVERB_PORT=443
-NEXT_PUBLIC_REVERB_SCHEME=https
-EOF
-npm ci
-npm run build
-```
-
-`API_URL` is only used by the Next.js server, so it points at the private API address. The Reverb values are what the **browser** uses, so they point at the public WebSocket address.
-
-In production the session cookie is marked `Secure`, so the app must be served over HTTPS or sign-in won't stick.
-
-## 5. Nginx
-
-`/etc/nginx/sites-available/transcosmos`:
+Nginx on the host, `/etc/nginx/sites-available/task-management`:
 
 ```nginx
-server {
-    listen 127.0.0.1:8000;
-    root /var/www/transcosmos/backend/public;
-    index index.php;
-    client_max_body_size 50m;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
-        fastcgi_read_timeout 120s;
-    }
-}
-
 server {
     server_name app.example.com;
     client_max_body_size 50m;
@@ -194,113 +156,63 @@ server {
 }
 ```
 
-`proxy_request_buffering off` lets uploads stream straight through to Next.js and on to the API, so upload progress in the browser reflects real progress. Adjust the PHP-FPM socket path to your PHP version.
-
-Enable the site and add TLS for the two public names:
-
 ```bash
-ln -s /etc/nginx/sites-available/transcosmos /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/task-management /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 certbot --nginx -d app.example.com -d ws.example.com
 ```
 
-## 6. Long-running processes (Supervisor)
+`proxy_request_buffering off` lets uploads stream straight through, so the browser's progress bar shows real progress. The API needs no public name; leave `API_PORT` on localhost, or add a third server block for it if other clients need the API.
 
-`/etc/supervisor/conf.d/transcosmos.conf`:
+The frontend runs with `NODE_ENV=production`, which marks the session cookie `Secure`. Browsers accept that on `http://localhost`; anywhere else the app must be on HTTPS or sign-in won't stick.
 
-```ini
-[program:transcosmos-queue]
-command=php /var/www/transcosmos/backend/artisan queue:work --sleep=1 --max-time=3600
-user=www-data
-numprocs=2
-process_name=%(program_name)s_%(process_num)02d
-autostart=true
-autorestart=true
-stopwaitsecs=900
-redirect_stderr=true
-stdout_logfile=/var/log/transcosmos/queue.log
+## 6. Data and backups
 
-[program:transcosmos-reverb]
-command=php /var/www/transcosmos/backend/artisan reverb:start
-user=www-data
-autostart=true
-autorestart=true
-redirect_stderr=true
-stdout_logfile=/var/log/transcosmos/reverb.log
-
-[program:transcosmos-frontend]
-command=npm run start -- -p 3000 -H 127.0.0.1
-directory=/var/www/transcosmos/frontend
-user=www-data
-environment=NODE_ENV="production"
-autostart=true
-autorestart=true
-redirect_stderr=true
-stdout_logfile=/var/log/transcosmos/frontend.log
-```
+| Volume       | Holds                                                              | Back up? |
+| ------------ | ------------------------------------------------------------------ | -------- |
+| `db-data`    | The database                                                       | Yes      |
+| `storage`    | Uploaded files, thumbnails, video streams and exports (`storage/`) | Yes      |
+| `redis-data` | Cache only; it rebuilds itself                                     | No       |
 
 ```bash
-mkdir -p /var/log/transcosmos
-supervisorctl reread && supervisorctl update
+docker compose exec -T db sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction "$MYSQL_DATABASE"' > backup.sql
+docker run --rm -v task-management_storage:/data -v "$PWD":/backup alpine tar czf /backup/storage.tgz -C /data .
 ```
 
-The file-processing, export, bulk-update and email jobs set their own retry counts and backoff, so the worker needs no `--tries`; broadcast events are attempted once. `stopwaitsecs=900` lets a running job finish before a restart; the longest, video processing, has an 840-second timeout. Keep the queue's `retry_after` (`DB_QUEUE_RETRY_AFTER`, default 900) above that timeout.
+To keep files on S3 instead of the `storage` volume, add `league/flysystem-aws-s3-v3` to the backend, pass the `AWS_*` variables to `backend`, and set `ATTACHMENTS_DISK=s3` and `EXPORTS_DISK=s3`.
 
-## 7. Scheduler
-
-Old exports (7 days) and abandoned chunked uploads (24 hours) are pruned by a daily scheduled task. Add to the `www-data` crontab (`crontab -u www-data -e`):
-
-```cron
-* * * * * cd /var/www/transcosmos/backend && php artisan schedule:run >> /dev/null 2>&1
-```
-
-## 8. Checking it works
+## 7. Deploying an update
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/up     # 200: API is up
-supervisorctl status                                                   # all RUNNING
-```
-
-Then sign in at `https://app.example.com`, open a task in two windows and post a comment. It should appear in the other window within a second. If it doesn't, check `/var/log/transcosmos/reverb.log` and the browser console for a failed `wss://ws.example.com` connection.
-
-## 9. Deploying an update
-
-```bash
-cd /var/www/transcosmos
 git pull
-
-cd backend
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan optimize
-php artisan queue:restart        # workers finish their current job, then reload the new code and .env
-php artisan reverb:restart
-
-cd ../frontend
-npm ci
-npm run build
-supervisorctl restart transcosmos-frontend
+docker compose up -d --build
 ```
 
-## 10. Security checklist
+Compose rebuilds the images and replaces the containers whose image changed; `backend` runs any new migrations as it starts. `backend` has `stop_grace_period: 900s`, so a running job (the longest, video processing, has an 840-second timeout) can finish before the container stops. Keep the queue's `retry_after` (`DB_QUEUE_RETRY_AFTER`, default 900) above that timeout.
 
-- [ ] `APP_DEBUG=false` and `APP_ENV=production`
-- [ ] New `APP_KEY`, `JWT_SECRET` and Reverb credentials, never reused from development
-- [ ] The API (`127.0.0.1:8000`) and MySQL are not reachable from the internet
+## 8. Operating it
+
+```bash
+docker compose logs -f backend                 # API, worker, scheduler and Reverb output
+docker compose exec backend php artisan about  # run any artisan command
+curl http://localhost:8000/up                  # 200 when the API is up
+```
+
+**Checking it works.** Sign in, open a task in two windows and post a comment. It should appear in the other window within a second. If it doesn't, look for a failed WebSocket connection to `REVERB_PUBLIC_HOST:REVERB_PUBLIC_PORT` in the browser console.
+
+| Symptom                                    | Fix                                                                                                                                                |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `required variable ... is missing a value` | Fill in that variable in `.env` (section 2)                                                                                                        |
+| `frontend` never starts                    | `nginx` isn't healthy yet. `docker compose logs backend` shows whether migrations failed, usually because of wrong database credentials            |
+| Sign-in succeeds but you're sent back      | The site isn't on HTTPS or `localhost`, so the browser drops the `Secure` session cookie (section 5)                                               |
+| Nothing updates live                       | The browser can't reach Reverb, or the frontend was built with other Reverb values. Check `REVERB_PUBLIC_*` and `WS_PORT`, then rebuild `frontend` |
+| Database password change has no effect     | MySQL only applies `DB_*` on the first start of an empty `db-data` volume. Change it inside MySQL, or remove the volume to start over              |
+
+## 9. Security checklist
+
+- [ ] New `APP_KEY`, `JWT_SECRET`, database and Reverb secrets, never reused from development
+- [ ] `.env` is not committed (the root `.gitignore` excludes it)
+- [ ] `APP_PORT`, `API_PORT` and `WS_PORT` bound to `127.0.0.1` behind an HTTPS proxy; `db` and `redis` stay unpublished
 - [ ] HTTPS on both public names (required for the `Secure` session cookie and `wss://`)
-- [ ] `storage/app/private` is outside the web root (it is by default) and backed up
-- [ ] Demo seed data not loaded, or the `admin@example.com` password changed
+- [ ] The `db-data` and `storage` volumes are backed up
 - [ ] A real virus scanner bound in place of the EICAR simulation if users upload untrusted files (see [architecture.md](architecture.md), decision 6)
-
-## Managed platforms
-
-The same processes run on any platform that supports PHP and Node:
-
-| Piece                                | Laravel Cloud / Forge                                       | Other platforms                                                                            |
-| ------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| API, queue worker, scheduler, Reverb | Built-in: add a worker, enable the scheduler, enable Reverb | A PHP container with three extra processes (`queue:work`, `reverb:start`, `schedule:work`) |
-| Frontend                             | Any Node host (Vercel, a Node container)                    | Set `API_URL` to the API's address; if the API has to be public, keep it on HTTPS          |
-| Files                                | S3-compatible storage (see section 3)                       |                                                                                            |
-| Database                             | Managed MySQL 8                                             |                                                                                            |
-
-If the frontend and API run on different hosts, the API must be reachable from the frontend's servers but still doesn't need to accept browser traffic: there is no CORS setup to do, because browsers never call it.

@@ -47,6 +47,7 @@ Code style: `vendor/bin/pint`.
 | `app/Events/`                                             | Broadcast events (`tasks.changed`, `comment.posted`, `comment.deleted`)         |
 | `app/Listeners/FlushTaskListCache.php`                    | Drops cached task lists whenever tasks change                                   |
 | `app/Actions/`                                            | Storing an attachment version; assembling a chunked upload                      |
+| `app/Console/Commands/CreateUser.php`                     | `php artisan user:create`: create a user from the command line                  |
 | `app/Services/EicarVirusScanner.php`                      | The simulated virus scanner (behind `app/Contracts/VirusScanner.php`)           |
 | `app/Services/VideoTranscoder.php`, `VideoRenditions.php` | ffmpeg calls for HLS streams and poster frames; which quality levels to build   |
 | `app/Services/TaskListCache.php`                          | Per-user cache of task list pages, invalidated by version                       |

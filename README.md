@@ -68,7 +68,7 @@ Sign in as **`admin@example.com`** / **`password`**.
 | [API documentation](documentation/api-docs/)                 | OpenAPI 3.1 spec and a Postman collection                             |
 | [Database schema](documentation/database-schema.md)          | Tables, columns, indexes, relationships, sample data                  |
 | [Architecture decisions](documentation/architecture.md)      | How the system fits together and why                                  |
-| [Deployment guide](documentation/deployment.md)              | Production setup with Nginx, Supervisor and TLS                       |
+| [Deployment guide](documentation/deployment.md)              | Production with Docker Compose, TLS, backups and updates              |
 | [`backend/database/schema.sql`](backend/database/schema.sql) | SQL schema with indexes                                               |
 | [`backend/database/dump.sql`](backend/database/dump.sql)     | SQL dump: schema plus sample data                                     |
 
