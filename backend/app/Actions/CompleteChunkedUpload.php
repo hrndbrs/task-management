@@ -2,7 +2,7 @@
 
 namespace App\Actions;
 
-use App\Jobs\GenerateAttachmentThumbnail;
+use App\Jobs\ScanAttachmentForViruses;
 use App\Models\ChunkedUpload;
 use App\Models\TaskAttachment;
 use Illuminate\Http\File;
@@ -55,9 +55,7 @@ class CompleteChunkedUpload
 
         $upload->discard();
 
-        if ($attachment->isImage()) {
-            GenerateAttachmentThumbnail::dispatch($attachment);
-        }
+        ScanAttachmentForViruses::dispatch($attachment);
 
         return $attachment;
     }

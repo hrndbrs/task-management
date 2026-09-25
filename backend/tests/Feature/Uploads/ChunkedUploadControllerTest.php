@@ -1,6 +1,6 @@
 <?php
 
-use App\Jobs\GenerateAttachmentThumbnail;
+use App\Jobs\ScanAttachmentForViruses;
 use App\Models\ChunkedUpload;
 use App\Models\Task;
 use App\Models\TaskAttachment;
@@ -232,17 +232,22 @@ describe('complete', function () {
         Storage::disk('local')->assertMissing($upload->chunkDirectory());
     });
 
-    it('queues a thumbnail when the assembled file is an image', function () {
+    it('queues a virus scan for the assembled file', function () {
         Queue::fake();
         $user = User::factory()->create();
-        $fakeImage = UploadedFile::fake()->image('photo.png', 40, 40);
-        $image = file_get_contents($fakeImage->getPathname());
-        $upload = startChunkedUpload($user, Task::factory()->create(['created_by' => $user->id]), 'photo.png', strlen($image));
-        sendAllChunks($user, $upload, $image);
+        $content = str_repeat(TEXT_CONTENT_LINE, 60);
+        $upload = startChunkedUpload($user, Task::factory()->create(['created_by' => $user->id]), 'notes.txt', strlen($content));
+        sendAllChunks($user, $upload, $content);
 
-        $this->actingAs($user, 'api')->postJson("/api/uploads/{$upload->id}/complete")->assertCreated();
+        $this->actingAs($user, 'api')
+            ->postJson("/api/uploads/{$upload->id}/complete")
+            ->assertCreated()
+            ->assertJsonPath('data.scan_status', 'pending');
 
-        Queue::assertPushed(GenerateAttachmentThumbnail::class);
+        Queue::assertPushed(
+            ScanAttachmentForViruses::class,
+            fn (ScanAttachmentForViruses $job) => $job->attachment->is(TaskAttachment::sole()),
+        );
     });
 
     it('returns 409 while the same upload is already being completed', function () {

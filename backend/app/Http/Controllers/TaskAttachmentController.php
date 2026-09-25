@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ScanStatus;
 use App\Http\Requests\StoreTaskAttachmentRequest;
 use App\Http\Resources\TaskAttachmentResource;
-use App\Jobs\GenerateAttachmentThumbnail;
+use App\Jobs\ScanAttachmentForViruses;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use Illuminate\Http\JsonResponse;
@@ -27,9 +28,7 @@ class TaskAttachmentController extends Controller
             'mime_type' => $file->getMimeType(),
         ]);
 
-        if ($attachment->isImage()) {
-            GenerateAttachmentThumbnail::dispatch($attachment);
-        }
+        ScanAttachmentForViruses::dispatch($attachment);
 
         return TaskAttachmentResource::make($attachment)
             ->response()
@@ -39,6 +38,9 @@ class TaskAttachmentController extends Controller
     public function download(TaskAttachment $attachment): StreamedResponse
     {
         Gate::authorize('view', $attachment->task);
+
+        abort_if($attachment->scan_status === ScanStatus::Pending, 409, 'This file is still being scanned for viruses.');
+        abort_if($attachment->scan_status === ScanStatus::Infected, 410, 'This file was removed because it failed the virus scan.');
 
         return Storage::disk(config('attachments.disk'))
             ->download($attachment->file_path, $attachment->file_name);

@@ -20,6 +20,8 @@ class TaskAttachmentResource extends JsonResource
             'file_name' => $this->file_name,
             'file_size' => $this->file_size,
             'mime_type' => $this->mime_type,
+            'scan_status' => $this->scan_status,
+            'scanned_at' => $this->scanned_at,
             'uploaded_at' => $this->uploaded_at,
             'download_url' => route('attachments.download', $this),
             'thumbnail_url' => $this->thumbnail_path ? route('attachments.thumbnail', $this) : null,

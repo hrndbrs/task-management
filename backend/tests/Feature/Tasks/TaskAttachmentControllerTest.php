@@ -1,9 +1,12 @@
 <?php
 
+use App\Enums\ScanStatus;
 use App\Jobs\GenerateAttachmentThumbnail;
+use App\Jobs\ScanAttachmentForViruses;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use App\Models\User;
+use App\Services\EicarVirusScanner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -174,34 +177,56 @@ describe('destroy', function () {
     });
 });
 
-describe('thumbnails', function () {
-    it('queues thumbnail generation for image uploads', function () {
+describe('virus scanning', function () {
+    it('queues a virus scan before any thumbnail and reports the upload as pending', function () {
         Queue::fake();
         $user = User::factory()->create();
         $task = Task::factory()->create(['created_by' => $user->id]);
 
         $this->actingAs($user, 'api')->postJson("/api/tasks/{$task->id}/attachments", [
             'file' => UploadedFile::fake()->image('photo.png', 640, 480),
-        ])->assertCreated();
+        ])->assertCreated()->assertJsonPath('data.scan_status', 'pending');
 
         Queue::assertPushed(
-            GenerateAttachmentThumbnail::class,
-            fn (GenerateAttachmentThumbnail $job) => $job->attachment->is(TaskAttachment::sole()),
+            ScanAttachmentForViruses::class,
+            fn (ScanAttachmentForViruses $job) => $job->attachment->is(TaskAttachment::sole()),
         );
+        Queue::assertNotPushed(GenerateAttachmentThumbnail::class);
     });
 
-    it('does not queue thumbnail generation for non-image uploads', function () {
-        Queue::fake();
+    it('returns 409 when downloading a file that is still being scanned', function () {
+        $attachment = TaskAttachment::factory()->pending()->create();
+
+        $this->actingAs(User::factory()->create(), 'api')
+            ->getJson("/api/attachments/{$attachment->id}/download")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'This file is still being scanned for viruses.');
+    });
+
+    it('returns 410 when downloading a file that failed the scan', function () {
+        $attachment = TaskAttachment::factory()->infected()->create();
+
+        $this->actingAs(User::factory()->create(), 'api')
+            ->getJson("/api/attachments/{$attachment->id}/download")
+            ->assertStatus(410)
+            ->assertJsonPath('message', 'This file was removed because it failed the virus scan.');
+    });
+
+    it('quarantines an uploaded file containing the EICAR test signature', function () {
         $user = User::factory()->create();
         $task = Task::factory()->create(['created_by' => $user->id]);
 
         $this->actingAs($user, 'api')->postJson("/api/tasks/{$task->id}/attachments", [
-            'file' => UploadedFile::fake()->create('report.pdf', 10, 'application/pdf'),
+            'file' => UploadedFile::fake()->createWithContent('eicar.txt', EicarVirusScanner::signature()),
         ])->assertCreated();
 
-        Queue::assertNotPushed(GenerateAttachmentThumbnail::class);
+        $attachment = TaskAttachment::sole();
+        expect($attachment->scan_status)->toBe(ScanStatus::Infected);
+        Storage::disk('local')->assertMissing($attachment->file_path);
     });
+});
 
+describe('thumbnails', function () {
     it('serves the generated thumbnail', function () {
         $user = User::factory()->create();
         $task = Task::factory()->create(['created_by' => $user->id]);
