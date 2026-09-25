@@ -12,6 +12,7 @@ How to run the platform in production on a single Linux server (Ubuntu 24.04 in 
 | Reverb (WebSockets) | `php artisan reverb:start`                     | `127.0.0.1:8080` | Yes, through Nginx at `wss://ws.example.com`    |
 | Scheduler           | `php artisan schedule:run` every minute (cron) |                  |                                                 |
 | MySQL 8+            |                                                | `127.0.0.1:3306` | No                                              |
+| Redis               | `redis-server`                                 | `127.0.0.1:6379` | No                                              |
 
 The browser only ever talks to the Next.js app and to Reverb. Every API call, including file uploads and downloads, goes through the Next.js server, which attaches the user's token (see [architecture.md](architecture.md), decisions 2 and 5). So the Laravel API can stay on a private address, which removes a whole attack surface.
 
@@ -23,7 +24,9 @@ flowchart LR
     Nginx -- "ws.example.com" --> Reverb["Reverb :8080"]
     Next -- "HTTP, private" --> API["Laravel API :8000"]
     API --> MySQL[(MySQL)]
+    API --> Redis[(Redis)]
     Worker["Queue worker"] --> MySQL
+    Worker -- "drop cached lists" --> Redis
     Worker -- "broadcast" --> Reverb
     API -- "broadcast" --> Reverb
 ```
@@ -31,7 +34,8 @@ flowchart LR
 ## 1. Server requirements
 
 - PHP 8.3+ with FPM and the `pdo_mysql`, `gd`, `mbstring`, `fileinfo`, `openssl`, `intl` extensions
-- Composer 2, Node.js 20.9+, MySQL 8+, Nginx, Supervisor, Certbot (TLS)
+- Composer 2, Node.js 20.9+, MySQL 8+, Redis, Nginx, Supervisor, Certbot (TLS)
+- The `redis` PHP extension (`apt install php8.3-redis`) for both FPM and CLI
 - `ffmpeg` and `ffprobe` (`apt install ffmpeg`) on the server that runs the queue worker, for video streaming
 - Two DNS names pointing at the server, for example `app.example.com` and `ws.example.com`
 
@@ -74,6 +78,12 @@ DB_PASSWORD=a-long-random-password
 
 QUEUE_CONNECTION=database
 BROADCAST_CONNECTION=reverb
+
+# Cache (task and user lists, rate limits, JWT blacklist)
+CACHE_STORE=redis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
 
 # Reverb app credentials: random strings (see setup-guide.md)
 REVERB_APP_ID=...
@@ -263,7 +273,7 @@ cd backend
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan optimize
-php artisan queue:restart        # workers finish their current job, then reload the new code
+php artisan queue:restart        # workers finish their current job, then reload the new code and .env
 php artisan reverb:restart
 
 cd ../frontend

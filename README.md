@@ -18,6 +18,7 @@ A task management system with real-time updates, file attachments and background
 - Background jobs: assignment emails, bulk status updates (job batches with progress), thumbnail generation, virus scanning, CSV/PDF exports
 - Comments on tasks
 - Real-time broadcasting over Laravel Reverb (task changes, comments, presence)
+- Redis caching of the task list and user list, dropped on every change; indexes for the list's default sort and common filters
 
 **Frontend (Next.js, `frontend/`)**
 
@@ -31,13 +32,14 @@ A task management system with real-time updates, file attachments and background
 - Real-time comments
 - Online users in the header, who else is viewing a task, and typing indicators on comments
 - Toast notifications
+- Thumbnails load lazily; the video player and hls.js load only when a video is played
 - Responsive from 320 px phones to desktop
 
-**Bonus challenges:** video streaming, and presence and typing indicators, are implemented; Redis caching is not.
+**Bonus challenges:** all three are implemented: video streaming, presence and typing indicators, and performance (Redis caching, query optimization, lazy loading).
 
 ## Quick start
 
-Needs PHP 8.3+ (with `upload_max_filesize` and `post_max_size` at 50M), Composer, Node.js 20.9+, MySQL 8+ and ffmpeg. The full walkthrough, including every environment variable, is in **[documentation/setup-guide.md](documentation/setup-guide.md)**.
+Needs PHP 8.3+ (with `upload_max_filesize` and `post_max_size` at 50M), Composer, Node.js 20.9+, MySQL 8+, Redis and ffmpeg. The full walkthrough, including every environment variable, is in **[documentation/setup-guide.md](documentation/setup-guide.md)**.
 
 ```bash
 # Backend
@@ -109,6 +111,7 @@ Laravel keeps application code in `backend/app/` and Next.js in `frontend/app/`;
 | Video     | ffmpeg (HLS transcoding, poster frames), hls.js                                         |
 | Real time | Laravel Reverb (WebSockets, Pusher protocol), Laravel Echo                              |
 | Queue     | Laravel queues on the database driver, job batches                                      |
+| Cache     | Redis (phpredis)                                                                        |
 | Database  | MySQL 8+                                                                                |
 | Frontend  | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Sonner                   |
 | Testing   | Pest, Vitest, React Testing Library, Playwright                                         |

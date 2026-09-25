@@ -45,9 +45,11 @@ Code style: `vendor/bin/pint`.
 | `app/Jobs/`                                               | Virus scan, thumbnail, video processing, export and bulk status jobs            |
 | `app/Notifications/TaskAssigned.php`                      | Queued assignment email                                                         |
 | `app/Events/`                                             | Broadcast events (`tasks.changed`, `comment.posted`, `comment.deleted`)         |
+| `app/Listeners/FlushTaskListCache.php`                    | Drops cached task lists whenever tasks change                                   |
 | `app/Actions/`                                            | Storing an attachment version; assembling a chunked upload                      |
 | `app/Services/EicarVirusScanner.php`                      | The simulated virus scanner (behind `app/Contracts/VirusScanner.php`)           |
 | `app/Services/VideoTranscoder.php`, `VideoRenditions.php` | ffmpeg calls for HLS streams and poster frames; which quality levels to build   |
+| `app/Services/TaskListCache.php`                          | Per-user cache of task list pages, invalidated by version                       |
 | `config/attachments.php`                                  | Allowed file types, size limits, chunk size, video quality levels, ffmpeg paths |
 | `config/exports.php`                                      | Export storage, PDF row limit, retention                                        |
 | `database/schema.sql`, `database/dump.sql`                | Generated SQL schema, and schema plus sample data                               |

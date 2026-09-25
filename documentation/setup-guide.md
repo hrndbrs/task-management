@@ -4,13 +4,14 @@ How to run the whole platform locally: the Laravel API, its queue worker and Web
 
 ## 1. Prerequisites
 
-| Tool     | Version                                                                                   | Check              |
-| -------- | ----------------------------------------------------------------------------------------- | ------------------ |
-| PHP      | 8.3 or newer, with the `pdo_mysql`, `gd`, `mbstring`, `fileinfo` and `openssl` extensions | `php -v`, `php -m` |
-| Composer | 2.x                                                                                       | `composer -V`      |
-| Node.js  | 20.9 or newer                                                                             | `node -v`          |
-| MySQL    | 8.0 or newer                                                                              | `mysql --version`  |
-| ffmpeg   | Any recent version, with `ffprobe` (`brew install ffmpeg`, `apt install ffmpeg`)          | `ffmpeg -version`  |
+| Tool     | Version                                                                                   | Check                      |
+| -------- | ----------------------------------------------------------------------------------------- | -------------------------- |
+| PHP      | 8.3 or newer, with the `pdo_mysql`, `gd`, `mbstring`, `fileinfo` and `openssl` extensions | `php -v`, `php -m`         |
+| Composer | 2.x                                                                                       | `composer -V`              |
+| Node.js  | 20.9 or newer                                                                             | `node -v`                  |
+| MySQL    | 8.0 or newer                                                                              | `mysql --version`          |
+| Redis    | Any recent version, and the `redis` PHP extension (`pecl install redis`; Herd ships it)   | `redis-cli ping`, `php -m` |
+| ffmpeg   | Any recent version, with `ffprobe` (`brew install ffmpeg`, `apt install ffmpeg`)          | `ffmpeg -version`          |
 
 **PHP upload limits.** PHP's defaults (`upload_max_filesize = 2M`, `post_max_size = 8M`) are too small: they reject normal uploads and the 5 MB chunks used for large files. Find your `php.ini` with `php --ini` and set:
 
@@ -25,6 +26,7 @@ No MySQL installed? Docker works:
 
 ```bash
 docker run -d --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=secret mysql:8
+docker run -d --name redis -p 6379:6379 redis
 ```
 
 ## 2. Backend (Laravel API)
@@ -57,6 +59,8 @@ echo "REVERB_APP_SECRET=$(openssl rand -hex 16)"
 
 and paste the output into `.env`, replacing the empty `REVERB_APP_ID=`, `REVERB_APP_KEY=` and `REVERB_APP_SECRET=` lines.
 
+**Cache.** `.env.example` uses Redis on `127.0.0.1:6379` with no password (`CACHE_STORE=redis`), which matches a default local Redis. To run without Redis, set `CACHE_STORE=database`; everything works the same, just without the speed-up.
+
 Create the database and load the schema with sample data:
 
 ```bash
@@ -64,7 +68,7 @@ mysql -u root -p -e "CREATE DATABASE transcosmos CHARACTER SET utf8mb4 COLLATE u
 php artisan migrate --seed
 ```
 
-(Alternatively, import `backend/database/dump.sql` instead of running `migrate --seed`. See [database-schema.md](database-schema.md).)
+(Alternatively, import `backend/database/dump.sql` instead of running `migrate --seed`, then run `php artisan cache:clear` so no list cached from an earlier database is served. See [database-schema.md](database-schema.md).)
 
 Start everything the backend needs:
 
@@ -163,17 +167,19 @@ npm run test:e2e
 
 They sign in as `admin@example.com` / `password`. Override with `E2E_EMAIL`, `E2E_PASSWORD` and `E2E_NAME` if you changed the seed. The tests create and delete their own tasks, but they do use your development database.
 
-**Video tests skip themselves when a tool is missing.** The backend video tests need `ffmpeg`, and the video E2E test needs Google Chrome (Playwright's bundled Chromium can't decode H.264). Without them those tests are reported as *skipped*, not failed, so check the summary for skipped tests before treating a green run as "video tested".
+**Video tests skip themselves when a tool is missing.** The backend video tests need `ffmpeg`, and the video E2E test needs Google Chrome (Playwright's bundled Chromium can't decode H.264). Without them those tests are reported as _skipped_, not failed, so check the summary for skipped tests before treating a green run as "video tested".
 
 ## 6. Troubleshooting
 
-| Symptom                                                            | Fix                                                                                                                                                                                                  |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Login fails with "Can't reach the server"                          | The API isn't running on `API_URL`. Start `composer dev` and check `curl http://localhost:8000/up`.                                                                                                  |
-| Login fails with "Key cannot be empty"                             | `JWT_SECRET` is missing. Run `php artisan jwt:secret --force`.                                                                                                                                       |
-| Uploads stay "Scanning for viruses…"                               | The queue worker isn't running. `composer dev` starts it, or run `php artisan queue:work` on its own.                                                                                                |
-| Video stays on "Preparing video…" or shows "Video can't be played" | The queue worker isn't running, or `ffmpeg` / `ffprobe` aren't installed or aren't on the worker's `PATH`. Set `FFMPEG_BINARY` and `FFPROBE_BINARY` in `backend/.env` to their full paths if needed. |
-| Nothing updates live                                               | Reverb isn't running, or `NEXT_PUBLIC_REVERB_APP_KEY` doesn't match `REVERB_APP_KEY`. Restart `npm run dev` after changing `.env.local`, since `NEXT_PUBLIC_*` values are read at startup.           |
-| "This file is too large for the server" (413)                      | Raise `upload_max_filesize` and `post_max_size` (section 1), then restart `composer dev`.                                                                                                            |
-| Downloading a seeded attachment fails                              | Seeded attachments are database rows without real files. Upload your own files to test downloads.                                                                                                    |
-| `SQLSTATE[HY000] [2002] Connection refused`                        | MySQL isn't running, or `DB_HOST` / `DB_PORT` are wrong.                                                                                                                                             |
+| Symptom                                                                  | Fix                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login fails with "Can't reach the server"                                | The API isn't running on `API_URL`. Start `composer dev` and check `curl http://localhost:8000/up`.                                                                                                  |
+| Login fails with "Key cannot be empty"                                   | `JWT_SECRET` is missing. Run `php artisan jwt:secret --force`.                                                                                                                                       |
+| Uploads stay "Scanning for viruses…"                                     | The queue worker isn't running. `composer dev` starts it, or run `php artisan queue:work` on its own.                                                                                                |
+| Video stays on "Preparing video…" or shows "Video can't be played"       | The queue worker isn't running, or `ffmpeg` / `ffprobe` aren't installed or aren't on the worker's `PATH`. Set `FFMPEG_BINARY` and `FFPROBE_BINARY` in `backend/.env` to their full paths if needed. |
+| Nothing updates live                                                     | Reverb isn't running, or `NEXT_PUBLIC_REVERB_APP_KEY` doesn't match `REVERB_APP_KEY`. Restart `npm run dev` after changing `.env.local`, since `NEXT_PUBLIC_*` values are read at startup.           |
+| "This file is too large for the server" (413)                            | Raise `upload_max_filesize` and `post_max_size` (section 1), then restart `composer dev`.                                                                                                            |
+| Downloading a seeded attachment fails                                    | Seeded attachments are database rows without real files. Upload your own files to test downloads.                                                                                                    |
+| `SQLSTATE[HY000] [2002] Connection refused`                              | MySQL isn't running, or `DB_HOST` / `DB_PORT` are wrong.                                                                                                                                             |
+| `Connection refused [tcp://127.0.0.1:6379]` or `Class "Redis" not found` | Redis isn't running, or the `redis` PHP extension is missing (section 1). Start Redis, or set `CACHE_STORE=database` in `backend/.env`.                                                              |
+| Lists still show old data after a bulk update                            | The queue worker started before `backend/.env` changed and still uses the old cache store. Restart `composer dev` after editing `.env`.                                                              |

@@ -17,6 +17,7 @@ flowchart LR
         Reverb["Reverb<br/>WebSocket server"]
     end
     DB[("MySQL")]
+    Cache[("Redis<br/>cache")]
     Disk[("Private file storage")]
     Mail["Mail"]
 
@@ -26,12 +27,14 @@ flowchart LR
     Proxy -- "Bearer JWT, streamed" --> API
     Browser <-- "WebSocket events" --> Reverb
     API --> DB
+    API --> Cache
     API --> Disk
     API -- "dispatch jobs" --> DB
     Worker -- "run jobs" --> DB
     Worker --> Disk
     Worker --> Mail
     Worker -- "broadcast" --> Reverb
+    Worker -- "drop cached lists" --> Cache
 ```
 
 Two applications in one repository:
@@ -149,10 +152,10 @@ The queue's `retry_after` is 900 seconds, above the longest job's timeout (video
 
 Presence channels carry each member's `{ id, name }` and nothing else:
 
-| Channel                       | Who may join                    | Events                                             | What the UI does                                                                                           |
-| ----------------------------- | ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `presence-online`             | Any signed-in user              | Member joined / left                               | Header shows who is online (avatars on wider screens, a count on phones).                                  |
-| `presence-tasks.{id}.viewers` | Anyone who can view task `{id}` | Member joined / left; client event `client-typing` | Task page shows who else has it open; the comment box shows who is typing.                                 |
+| Channel                       | Who may join                    | Events                                             | What the UI does                                                           |
+| ----------------------------- | ------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
+| `presence-online`             | Any signed-in user              | Member joined / left                               | Header shows who is online (avatars on wider screens, a count on phones).  |
+| `presence-tasks.{id}.viewers` | Anyone who can view task `{id}` | Member joined / left; client event `client-typing` | Task page shows who else has it open; the comment box shows who is typing. |
 
 **Typing indicators are client events (whispers).** Typing is ephemeral and high-frequency, so it goes browser to browser through Reverb without touching Laravel or the database. Reverb only accepts client events from members of a presence channel (`accept_client_events_from: members`), which is why typing rides on the viewers channel. The sender whispers `{ typing: true }` at most every 2 seconds while the draft is non-empty, and `{ typing: false }` when it posts or clears the draft. Receivers identify the sender by the `user_id` Reverb stamps on every client event from its authenticated connection, never by anything in the payload, so a member can't make it look like someone else is typing. They show only senders who are current members of the channel, with the name from the presence member list, and drop a typist after 5 seconds without a new whisper or when they leave.
 
@@ -169,7 +172,7 @@ All events are dispatched **after the database transaction commits**, so clients
 ## 11. Data model choices
 
 - **Status and priority are strings validated by PHP enums**, not MySQL `ENUM` columns. Adding a value is a code change with no migration, and the enums define the logical sort order (low → urgent).
-- **Indexes follow the queries the app runs**: `(status, priority)` for filters, `due_date` for sorting, `(user_id, created_at)` for "my exports", `(version_group, version)` unique for versioning, `created_at` on pruned tables.
+- **Indexes follow the queries the app runs**: `created_at` for the task list's default sort, `(status, created_at)` and `(assigned_user_id, created_at)` for the most common filters with that sort, `(status, priority)` for filters, `due_date` for sorting, `(task_id, created_at)` for a task's comment thread, `(user_id, created_at)` for "my exports", `(version_group, version)` unique for versioning, `created_at` on pruned tables. See decision 14.
 - **Deleting a user who created tasks is blocked** by a `RESTRICT` foreign key; tasks assigned to a deleted user become unassigned.
 
 See [database-schema.md](database-schema.md) for every table.
@@ -201,6 +204,32 @@ Everything is served through `GET /api/attachments/{id}/stream/{path}`, which ch
 
 **Cost.** `ffmpeg` must be installed where the queue worker runs (`FFMPEG_BINARY` and `FFPROBE_BINARY` override the paths). Transcoding takes CPU time in proportion to the video's length and resolution, and the renditions take storage on top of the original.
 
+## 14. Performance: Redis caching, indexes and lazy loading
+
+**API response caching.** Laravel's cache runs on Redis (`CACHE_STORE=redis`). Two responses are cached whole, as the JSON they return:
+
+| Response         | Cache key                                                   | Lifetime   | Dropped when                                                                                           |
+| ---------------- | ----------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| `GET /api/tasks` | `tasks:list:{version}:user:{id}:{hash of filters and page}` | 10 minutes | Any `TasksChanged` event (create, update, delete, bulk status update), or any user is saved or deleted |
+| `GET /api/users` | `users:directory`                                           | 1 hour     | Any user is saved or deleted                                                                           |
+
+The task list is cached **per user** because each task carries that user's `can` flags. The key hashes only the validated filters and the page number, so unrelated query parameters can't create extra entries.
+
+Rather than tracking and deleting every cached page, `TaskListCache` puts a random **version** in each key. `FlushTaskListCache` listens for `TasksChanged` and replaces the version; old entries are never read again and expire on their own. This works on any cache store (Redis, database, array in tests), unlike cache tags. `TasksChanged` is dispatched after the transaction commits, so a list can't be re-cached from rows that are about to roll back. It covers bulk status updates too, which update rows with a single query and fire no model events. Seeding skips model events, so the seeder drops the cached lists itself when it finishes.
+
+**Why these two.** They are the most-requested responses (every dashboard visit and live refresh reads the list; every task page reads the users) and the cheapest to invalidate correctly. Task details and comments are not cached: they change often, are fetched one task at a time, and their queries are already indexed lookups.
+
+**Query optimization.**
+
+- Indexes for what the list actually does: `created_at` for the default newest-first sort, which otherwise scanned and sorted the whole table; `(status, created_at)` and `(assigned_user_id, created_at)` so the two most common filters read rows already in order; `(task_id, created_at)` so a task's comments come back in order without a sort. Checked with `EXPLAIN` on about 10,000 tasks.
+- Every list eager-loads what it renders (`assignedUser`, `creator`; comment `user`), and `Model::preventLazyLoading()` is on outside production, so an N+1 query fails loudly in development and tests. Tests also check that the task and comment lists run the same number of queries for 2 rows as for 14.
+
+**Images and HTTP caching.** Thumbnails are generated on the queue as WebP, at most 300 px, so the browser never downloads a full-size image to show a 40 px preview. They load with `loading="lazy"` and fixed dimensions, so off-screen ones aren't fetched and the list doesn't shift when they arrive. The thumbnail endpoint sends `Cache-Control: private, max-age=604800, immutable`: a thumbnail never changes (a new version of a file is a new attachment), so the browser keeps it for a week without asking again. Video segments were already cacheable for an hour.
+
+**Code splitting.** Next.js splits the bundle by route, and only the Client Components a page actually renders are sent. On top of that, the video player is loaded with `next/dynamic` (`ssr: false`) when someone presses Play, and hls.js is imported inside it, so neither is part of the task page's initial JavaScript.
+
+**Cost.** Redis is one more service to run (set `CACHE_STORE=database` to go without it). A change to any task invalidates every user's cached list, which is simple and always correct but means a busy system recomputes lists often; with many writers, per-user or per-filter invalidation would keep more hits. Long-running queue workers read `.env` once, so after changing the cache store they must be restarted (`php artisan queue:restart`), or their invalidations go to the old store.
+
 ## Known limitations and next steps
 
 | Area                     | Current state                                                                                    | Next step                                                                          |
@@ -213,4 +242,3 @@ Everything is served through `GET /api/attachments/{id}/stream/{path}`, which ch
 | Search                   | Title only                                                                                       | Full-text index over title and description                                         |
 | Seeded attachments       | Rows without files; downloading one returns an error                                             | Seed real sample files, and return 404 when a stored file is missing               |
 | Video processing         | Runs on the same queue as everything else, so a long transcode delays scans and emails behind it | Move `ProcessVideoAttachment` to a dedicated `media` queue with its own worker     |
-| Bonus challenges         | Redis caching is not implemented                                                                 |                                                                                    |
