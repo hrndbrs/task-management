@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class TaskController extends Controller
 {
@@ -46,7 +47,7 @@ class TaskController extends Controller
     {
         Gate::authorize('view', $task);
 
-        return TaskResource::make($task->load(['assignedUser', 'creator']));
+        return TaskResource::make($task->load(['assignedUser', 'creator', 'attachments']));
     }
 
     public function update(UpdateTaskRequest $request, Task $task): TaskResource
@@ -60,7 +61,11 @@ class TaskController extends Controller
     {
         Gate::authorize('delete', $task);
 
+        // Attachment rows cascade in the DB, but their files must be removed explicitly.
+        $paths = $task->attachments()->pluck('file_path')->all();
+
         $task->delete();
+        Storage::disk(config('attachments.disk'))->delete($paths);
 
         return response()->noContent();
     }
