@@ -169,7 +169,7 @@ function UploadRow({
           type="button"
           onClick={upload.error ? onDismiss : onCancel}
           aria-label={`${upload.error ? "Dismiss" : "Cancel upload of"} ${upload.name}`}
-          className="shrink-0 rounded px-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="-my-1 shrink-0 rounded px-2 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           {upload.error ? "Dismiss" : "Cancel"}
         </button>

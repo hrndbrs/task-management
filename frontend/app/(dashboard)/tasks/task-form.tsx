@@ -7,7 +7,7 @@ import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/task-labels";
 import { TASK_PRIORITIES, TASK_STATUSES, type Task, type User } from "@/lib/types";
 
 const inputClass =
-  "mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 aria-invalid:border-red-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-300 dark:focus:ring-zinc-300";
+  "mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 shadow-sm sm:text-sm outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 aria-invalid:border-red-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-300 dark:focus:ring-zinc-300";
 const labelClass = "text-sm font-medium text-zinc-800 dark:text-zinc-200";
 
 type Props = {

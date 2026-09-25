@@ -40,19 +40,19 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             <li key={task.id}>
               <Link
                 href={`/tasks/${task.id}`}
-                className="grid gap-2 px-4 py-3 transition-colors hover:bg-zinc-50 sm:grid-cols-[1fr_auto_5rem_9rem_7rem] sm:items-center sm:gap-4 dark:hover:bg-zinc-800/50"
+                className="grid gap-2 px-4 py-3 transition-colors hover:bg-zinc-50 lg:grid-cols-[1fr_auto_5rem_9rem_7rem] lg:items-center lg:gap-4 dark:hover:bg-zinc-800/50"
               >
                 <span className="truncate font-medium text-zinc-900 dark:text-zinc-100">
                   {task.title}
                 </span>
-                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:contents">
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:contents">
                   <StatusBadge status={task.status} />
                   <PriorityLabel priority={task.priority} />
                   <span className="truncate text-sm text-zinc-600 dark:text-zinc-400">
                     {task.assigned_user?.name ?? "Unassigned"}
                   </span>
                   <span
-                    className={`text-sm whitespace-nowrap sm:text-right ${
+                    className={`text-sm whitespace-nowrap lg:text-right ${
                       isOverdue(task.due_date, task.status)
                         ? "font-medium text-red-600 dark:text-red-400"
                         : "text-zinc-500 dark:text-zinc-400"
