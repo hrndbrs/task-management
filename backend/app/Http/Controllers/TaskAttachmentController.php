@@ -2,33 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\StoreAttachment;
 use App\Enums\ScanStatus;
 use App\Http\Requests\StoreTaskAttachmentRequest;
 use App\Http\Resources\TaskAttachmentResource;
-use App\Jobs\ScanAttachmentForViruses;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TaskAttachmentController extends Controller
 {
-    public function store(StoreTaskAttachmentRequest $request, Task $task): JsonResponse
+    public function store(StoreTaskAttachmentRequest $request, Task $task, StoreAttachment $storeAttachment): JsonResponse
     {
         $file = $request->file('file');
 
-        $attachment = $task->attachments()->create([
-            'file_name' => Str::limit($file->getClientOriginalName(), 255, ''),
+        $attachment = $storeAttachment->handle($task, [
+            'file_name' => $file->getClientOriginalName(),
             'file_path' => $file->store("attachments/{$task->id}", config('attachments.disk')),
             'file_size' => $file->getSize(),
             'mime_type' => $file->getMimeType(),
         ]);
-
-        ScanAttachmentForViruses::dispatch($attachment);
 
         return TaskAttachmentResource::make($attachment)
             ->response()
@@ -55,12 +52,19 @@ class TaskAttachmentController extends Controller
         return Storage::disk(config('attachments.disk'))->response($attachment->thumbnail_path);
     }
 
+    /**
+     * Delete the file together with every one of its versions.
+     */
     public function destroy(TaskAttachment $attachment): Response
     {
         Gate::authorize('update', $attachment->task);
 
-        $attachment->delete();
-        Storage::disk(config('attachments.disk'))->delete($attachment->storedPaths());
+        $versions = $attachment->versions()->get();
+
+        $attachment->versions()->delete();
+        Storage::disk(config('attachments.disk'))->delete(
+            $versions->flatMap->storedPaths()->unique()->values()->all(),
+        );
 
         return response()->noContent();
     }

@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreChunkedUploadRequest extends FormRequest
 {
@@ -41,6 +42,11 @@ class StoreChunkedUploadRequest extends FormRequest
                 'integer',
                 'min:1',
                 'max:'.config('attachments.chunked.max_size') * 1024,
+            ],
+            'attachment_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('task_attachments', 'id')->where('task_id', $this->route('task')->id),
             ],
         ];
     }

@@ -9,6 +9,7 @@ use App\Http\Resources\ChunkedUploadResource;
 use App\Http\Resources\TaskAttachmentResource;
 use App\Models\ChunkedUpload;
 use App\Models\Task;
+use App\Models\TaskAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -23,6 +24,9 @@ class ChunkedUploadController extends Controller
 
         $upload = $task->chunkedUploads()->create([
             'user_id' => $request->user()->id,
+            'version_group' => $request->filled('attachment_id')
+                ? TaskAttachment::whereKey($request->integer('attachment_id'))->value('version_group')
+                : null,
             'file_name' => $request->string('file_name')->toString(),
             'file_size' => $fileSize,
             'chunk_size' => $chunkSize,

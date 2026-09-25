@@ -250,6 +250,41 @@ describe('complete', function () {
         );
     });
 
+    it('completes as a new version when an existing attachment is given', function () {
+        $user = User::factory()->create();
+        $task = Task::factory()->create(['created_by' => $user->id]);
+        $existing = TaskAttachment::factory()->create(['task_id' => $task->id]);
+        $content = str_repeat(TEXT_CONTENT_LINE, 60);
+
+        $this->actingAs($user, 'api')->postJson("/api/tasks/{$task->id}/attachments/uploads", [
+            'file_name' => 'notes.txt',
+            'file_size' => strlen($content),
+            'attachment_id' => $existing->id,
+        ])->assertCreated();
+        $upload = ChunkedUpload::sole();
+        sendAllChunks($user, $upload, $content);
+
+        $response = $this->actingAs($user, 'api')->postJson("/api/uploads/{$upload->id}/complete");
+
+        $response->assertCreated()->assertJsonPath('data.version', 2);
+        expect(TaskAttachment::find($response->json('data.id'))->version_group)->toBe($existing->version_group);
+    });
+
+    it('returns 422 when the attachment to version belongs to another task', function () {
+        $user = User::factory()->create();
+        $task = Task::factory()->create(['created_by' => $user->id]);
+        $foreign = TaskAttachment::factory()->create();
+
+        $this->actingAs($user, 'api')
+            ->postJson("/api/tasks/{$task->id}/attachments/uploads", [
+                'file_name' => 'notes.txt',
+                'file_size' => 2700,
+                'attachment_id' => $foreign->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['attachment_id']);
+    });
+
     it('returns 409 while the same upload is already being completed', function () {
         $user = User::factory()->create();
         $upload = startChunkedUpload($user, Task::factory()->create(['created_by' => $user->id]), 'notes.txt', 2700);

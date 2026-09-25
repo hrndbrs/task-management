@@ -2,7 +2,6 @@
 
 namespace App\Actions;
 
-use App\Jobs\ScanAttachmentForViruses;
 use App\Models\ChunkedUpload;
 use App\Models\TaskAttachment;
 use Illuminate\Http\File;
@@ -13,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class CompleteChunkedUpload
 {
+    public function __construct(private StoreAttachment $storeAttachment) {}
+
     /**
      * @throws ValidationException
      */
@@ -42,20 +43,19 @@ class CompleteChunkedUpload
             $path = "attachments/{$upload->task_id}/".Str::random(40).'.'.$file->guessExtension();
             rewind($assembled);
             $disk->writeStream($path, $assembled);
-
-            $attachment = $upload->task->attachments()->create([
-                'file_name' => Str::limit($upload->file_name, 255, ''),
-                'file_path' => $path,
-                'file_size' => $upload->file_size,
-                'mime_type' => $file->getMimeType(),
-            ]);
+            $mimeType = $file->getMimeType();
         } finally {
             fclose($assembled);
         }
 
-        $upload->discard();
+        $attachment = $this->storeAttachment->handle($upload->task, [
+            'file_name' => $upload->file_name,
+            'file_path' => $path,
+            'file_size' => $upload->file_size,
+            'mime_type' => $mimeType,
+        ], $upload->version_group);
 
-        ScanAttachmentForViruses::dispatch($attachment);
+        $upload->discard();
 
         return $attachment;
     }

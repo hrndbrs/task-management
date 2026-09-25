@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttachmentVersionController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ChunkedUploadController;
 use App\Http\Controllers\TaskAttachmentController;
@@ -22,6 +23,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('attachments/{attachment}/download', [TaskAttachmentController::class, 'download'])->name('attachments.download');
     Route::get('attachments/{attachment}/thumbnail', [TaskAttachmentController::class, 'thumbnail'])->name('attachments.thumbnail');
     Route::delete('attachments/{attachment}', [TaskAttachmentController::class, 'destroy'])->name('attachments.destroy');
+
+    Route::get('attachments/{attachment}/versions', [AttachmentVersionController::class, 'index'])->name('attachments.versions.index');
+    Route::post('attachments/{attachment}/versions', [AttachmentVersionController::class, 'store'])->name('attachments.versions.store');
+    Route::post('attachments/{attachment}/restore', [AttachmentVersionController::class, 'restore'])->name('attachments.restore');
 
     Route::post('tasks/{task}/attachments/uploads', [ChunkedUploadController::class, 'store'])->name('tasks.attachments.uploads.store');
     Route::get('uploads/{upload}', [ChunkedUploadController::class, 'show'])->name('uploads.show');

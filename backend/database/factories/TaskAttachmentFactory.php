@@ -23,6 +23,8 @@ class TaskAttachmentFactory extends Factory
 
         return [
             'task_id' => Task::factory(),
+            'version_group' => fake()->uuid(),
+            'version' => 1,
             'file_name' => $fileName,
             'file_path' => 'attachments/'.fake()->uuid().'/'.$fileName,
             'file_size' => fake()->numberBetween(1_024, 20 * 1_024 * 1_024),

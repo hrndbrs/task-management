@@ -47,7 +47,11 @@ class TaskController extends Controller
     {
         Gate::authorize('view', $task);
 
-        return TaskResource::make($task->load(['assignedUser', 'creator', 'attachments']));
+        return TaskResource::make($task->load([
+            'assignedUser',
+            'creator',
+            'attachments' => fn ($query) => $query->latestVersions()->oldest('uploaded_at'),
+        ]));
     }
 
     public function update(UpdateTaskRequest $request, Task $task): TaskResource

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['task_id', 'user_id', 'file_name', 'file_size', 'chunk_size', 'total_chunks'])]
+#[Fillable(['task_id', 'user_id', 'version_group', 'file_name', 'file_size', 'chunk_size', 'total_chunks'])]
 class ChunkedUpload extends Model
 {
     /** @use HasFactory<ChunkedUploadFactory> */

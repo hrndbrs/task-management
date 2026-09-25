@@ -17,6 +17,7 @@ class TaskAttachmentResource extends JsonResource
         return [
             'id' => $this->id,
             'task_id' => $this->task_id,
+            'version' => $this->version,
             'file_name' => $this->file_name,
             'file_size' => $this->file_size,
             'mime_type' => $this->mime_type,
@@ -24,6 +25,7 @@ class TaskAttachmentResource extends JsonResource
             'scanned_at' => $this->scanned_at,
             'uploaded_at' => $this->uploaded_at,
             'download_url' => route('attachments.download', $this),
+            'versions_url' => route('attachments.versions.index', $this),
             'thumbnail_url' => $this->thumbnail_path ? route('attachments.thumbnail', $this) : null,
         ];
     }
