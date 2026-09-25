@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend: Next.js app
 
-## Getting Started
+The web UI for the task management platform. Next.js 16 (App Router), React 19, TypeScript and Tailwind CSS 4. Requires Node.js 20.9+ and the backend running.
 
-First, run the development server:
+Full setup: [../documentation/setup-guide.md](../documentation/setup-guide.md). How it fits with the API: [../documentation/architecture.md](../documentation/architecture.md).
+
+## Setup and running
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # set NEXT_PUBLIC_REVERB_APP_KEY to the backend's REVERB_APP_KEY
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Variable                     | Default                     | Meaning                                                   |
+| ---------------------------- | --------------------------- | --------------------------------------------------------- |
+| `API_URL`                    | `http://localhost:8000/api` | Where the Next.js server calls the API. Server-side only. |
+| `NEXT_PUBLIC_REVERB_APP_KEY` | _(empty)_                   | Reverb app key. Empty turns off real-time updates.        |
+| `NEXT_PUBLIC_REVERB_HOST`    | `localhost`                 | WebSocket host as the browser sees it                     |
+| `NEXT_PUBLIC_REVERB_PORT`    | `8081`                      | WebSocket port                                            |
+| `NEXT_PUBLIC_REVERB_SCHEME`  | `http`                      | `https` uses `wss://`                                     |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`NEXT_PUBLIC_*` values are built into the JavaScript: restart `npm run dev`, or rebuild, after changing them.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Production: `npm run build && npm run start`. See [../documentation/deployment.md](../documentation/deployment.md).
 
-## Learn More
+## Testing
 
-To learn more about Next.js, take a look at the following resources:
+| Command            | Runs                                                                                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`         | Vitest unit and integration tests (components, server actions, API proxy, upload logic)                                                         |
+| `npm run test:e2e` | Playwright end-to-end tests against the running app. Needs the backend and a seeded database; run `npx playwright install chromium` once first. |
+| `npm run lint`     | ESLint                                                                                                                                          |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How it talks to the API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The browser never holds the API token. Signing in stores the JWT in an httpOnly cookie, and:
 
-## Deploy on Vercel
+- **Pages** are server components that call the API from the Next.js server (`lib/api.ts`, `lib/tasks.ts`).
+- **Changes** go through server actions (`app/actions/`).
+- **File uploads and downloads** go through `app/api/[...path]/route.ts`, which streams them to the API with the token attached. It only forwards an allowlist of file routes (uploads, file and thumbnail downloads, export downloads).
+- **WebSocket channel authorization** goes through `app/api/broadcasting/auth/route.ts`.
+- **`proxy.ts`** sends signed-out visitors to `/login`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Where things are
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Path                                                 | Contents                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------- |
+| `app/login/`                                         | Sign-in page                                                     |
+| `app/(dashboard)/page.tsx`                           | Task list with search, filters, sort and pagination              |
+| `app/(dashboard)/tasks/new/`, `tasks/[id]/`          | Create a task; view or edit one, with its files and comments     |
+| `app/(dashboard)/tasks/[id]/attachment-uploader.tsx` | Drag-and-drop uploads with progress                              |
+| `app/(dashboard)/tasks/[id]/task-comments.tsx`       | Real-time comments                                               |
+| `app/(dashboard)/live-task-updates.tsx`              | Refreshes the page when tasks change elsewhere                   |
+| `app/(dashboard)/export-button.tsx`                  | CSV/PDF export of the current task list                          |
+| `app/actions/`                                       | Server actions: auth, tasks, attachments, comments, exports      |
+| `components/toasts.tsx`                              | Toast notifications, including messages carried across redirects |
+| `lib/upload.ts`                                      | Upload logic: validation, progress, chunking over 45 MB          |
+| `lib/task-filters.ts`                                | Reading and writing the task list filters in the URL             |
+| `lib/echo.ts`                                        | Laravel Echo (Reverb) connection                                 |
+| `tests/unit/`, `tests/e2e/`                          | Vitest and Playwright tests                                      |
