@@ -1,13 +1,16 @@
 "use client";
 
 import { useEcho } from "@laravel/echo-react";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteComment, postComment } from "@/app/actions/comments";
 import { realtimeEnabled } from "@/lib/echo";
+import { usePresence } from "@/lib/presence";
 import type { Comment, User } from "@/lib/types";
 
 const MAX_LENGTH = 5000;
+const TYPING_THROTTLE_MS = 2000;
+const TYPING_TIMEOUT_MS = 5000;
 
 const timeFormat = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -17,6 +20,8 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
 });
 
 type CommentEvent = { comment: Comment } | { id: number };
+type TypingWhisper = { typing: boolean };
+type WhisperSender = { user_id?: string };
 
 export function TaskComments({
   taskId,
@@ -64,7 +69,11 @@ export function TaskComments({
         </ol>
       )}
 
-      <CommentForm taskId={taskId} onPosted={add} />
+      {realtimeEnabled ? (
+        <LiveCommentForm taskId={taskId} currentUser={currentUser} onPosted={add} />
+      ) : (
+        <CommentForm taskId={taskId} onPosted={add} />
+      )}
     </div>
   );
 }
@@ -84,6 +93,71 @@ function CommentListener({
   });
 
   return null;
+}
+
+function LiveCommentForm({
+  taskId,
+  currentUser,
+  onPosted,
+}: {
+  taskId: number;
+  currentUser: User;
+  onPosted: (comment: Comment) => void;
+}) {
+  const { members, channel } = usePresence(`tasks.${taskId}.viewers`);
+  const [typingIds, setTypingIds] = useState<number[]>([]);
+  const lastSent = useRef(0);
+
+  useEffect(() => {
+    const presence = channel();
+    if (!presence) return;
+
+    const timers = new Map<number, ReturnType<typeof setTimeout>>();
+    const stop = (id: number) => {
+      clearTimeout(timers.get(id));
+      timers.delete(id);
+      setTypingIds((ids) => ids.filter((typingId) => typingId !== id));
+    };
+    const receive = ({ typing }: TypingWhisper, sender?: WhisperSender) => {
+      const id = Number(sender?.user_id);
+      if (!id) return;
+      if (!typing) return stop(id);
+      clearTimeout(timers.get(id));
+      timers.set(id, setTimeout(() => stop(id), TYPING_TIMEOUT_MS));
+      setTypingIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+    };
+
+    presence.listenForWhisper("typing", receive);
+    return () => {
+      presence.stopListeningForWhisper("typing", receive);
+      timers.forEach(clearTimeout);
+    };
+  }, [channel]);
+
+  const sendTyping = (typing: boolean) => {
+    const now = Date.now();
+    if (typing ? now - lastSent.current < TYPING_THROTTLE_MS : lastSent.current === 0) return;
+    lastSent.current = typing ? now : 0;
+    channel()?.whisper("typing", { typing });
+  };
+
+  const typists = members.filter((member) => member.id !== currentUser.id && typingIds.includes(member.id));
+
+  return (
+    <div className="space-y-1">
+      <p aria-live="polite" className="min-h-4 text-xs text-zinc-500 dark:text-zinc-400">
+        {typingLabel(typists.map((member) => member.name))}
+      </p>
+      <CommentForm taskId={taskId} onPosted={onPosted} onTyping={sendTyping} />
+    </div>
+  );
+}
+
+function typingLabel(names: string[]) {
+  if (names.length === 0) return "";
+  if (names.length === 1) return `${names[0]} is typing…`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
+  return `${names.length} people are typing…`;
 }
 
 function CommentItem({
@@ -136,7 +210,15 @@ function CommentItem({
   );
 }
 
-function CommentForm({ taskId, onPosted }: { taskId: number; onPosted: (comment: Comment) => void }) {
+function CommentForm({
+  taskId,
+  onPosted,
+  onTyping,
+}: {
+  taskId: number;
+  onPosted: (comment: Comment) => void;
+  onTyping?: (typing: boolean) => void;
+}) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -152,6 +234,7 @@ function CommentForm({ taskId, onPosted }: { taskId: number; onPosted: (comment:
       const result = await postComment(taskId, text.trim());
       if (result.comment) {
         onPosted(result.comment);
+        onTyping?.(false);
         setText("");
       } else {
         setError(result.message);
@@ -170,7 +253,10 @@ function CommentForm({ taskId, onPosted }: { taskId: number; onPosted: (comment:
         value={text}
         maxLength={MAX_LENGTH}
         placeholder="Add a comment…"
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          onTyping?.(e.target.value.trim() !== "");
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) form.current?.requestSubmit();
         }}

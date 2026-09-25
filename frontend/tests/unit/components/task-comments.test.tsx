@@ -4,8 +4,9 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteComment, postComment } from "@/app/actions/comments";
 import type { Comment, User } from "@/lib/types";
+import { type FakePresenceChannel, fakePresenceChannel } from "../fakes";
 
-const echo = vi.hoisted(() => ({ configureEcho: vi.fn(), useEcho: vi.fn() }));
+const echo = vi.hoisted(() => ({ configureEcho: vi.fn(), useEcho: vi.fn(), usePresenceChannel: vi.fn() }));
 
 vi.mock("@laravel/echo-react", () => echo);
 vi.mock("@/app/actions/comments", () => ({ postComment: vi.fn(), deleteComment: vi.fn() }));
@@ -32,9 +33,19 @@ function broadcast(payload: unknown) {
 
 const list = () => screen.getByRole("list", { name: "Comments" });
 
+let presence: FakePresenceChannel;
+
 describe("TaskComments", () => {
-  beforeEach(() => vi.stubEnv("NEXT_PUBLIC_REVERB_APP_KEY", "app-key"));
-  afterEach(() => vi.unstubAllEnvs());
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_REVERB_APP_KEY", "app-key");
+    presence = fakePresenceChannel();
+    const api = { channel: () => presence };
+    echo.usePresenceChannel.mockReturnValue(api);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
 
   it("lists comments with their authors", async () => {
     await renderComments([comment(1, ada, "First"), comment(2, alan, "Second")]);
@@ -116,6 +127,92 @@ describe("TaskComments", () => {
     await renderComments([]);
 
     expect(echo.useEcho).not.toHaveBeenCalled();
+    expect(echo.usePresenceChannel).not.toHaveBeenCalled();
+  });
+
+  describe("typing indicators", () => {
+    const typing = () => screen.getByText(/typing…$/);
+
+    it("joins the task's viewers channel", async () => {
+      await renderComments([]);
+
+      expect(echo.usePresenceChannel).toHaveBeenCalledWith("tasks.7.viewers");
+    });
+
+    it("shows who is typing until they stop", async () => {
+      await renderComments([], ada);
+      act(() => presence.join([ada, alan, admin]));
+
+      act(() => presence.whisperFrom(alan.id, "typing", { typing: true }));
+      expect(typing()).toHaveTextContent("Alan is typing…");
+
+      act(() => presence.whisperFrom(admin.id, "typing", { typing: true }));
+      expect(typing()).toHaveTextContent("Alan and Grace are typing…");
+
+      act(() => presence.whisperFrom(alan.id, "typing", { typing: false }));
+      expect(typing()).toHaveTextContent("Grace is typing…");
+    });
+
+    it("clears a typist who goes quiet or leaves", async () => {
+      vi.useFakeTimers();
+      await renderComments([], ada);
+      act(() => presence.join([ada, alan, admin]));
+
+      act(() => {
+        presence.whisperFrom(alan.id, "typing", { typing: true });
+        presence.whisperFrom(admin.id, "typing", { typing: true });
+      });
+      act(() => presence.remove(admin.id));
+      expect(typing()).toHaveTextContent("Alan is typing…");
+
+      act(() => vi.advanceTimersByTime(5000));
+      expect(screen.queryByText(/typing…$/)).not.toBeInTheDocument();
+    });
+
+    it("trusts the sender stamped by the server, not the payload", async () => {
+      await renderComments([], ada);
+      act(() => presence.join([ada, alan, admin]));
+
+      act(() => presence.whisperFrom(alan.id, "typing", { id: admin.id, typing: true }));
+      act(() => presence.whisperFrom(null, "typing", { id: admin.id, typing: true }));
+
+      expect(typing()).toHaveTextContent("Alan is typing…");
+    });
+
+    it("ignores whispers from people not on the channel", async () => {
+      await renderComments([], ada);
+      act(() => presence.join([ada]));
+
+      act(() => presence.whisperFrom(alan.id, "typing", { typing: true }));
+
+      expect(screen.queryByText(/typing…$/)).not.toBeInTheDocument();
+    });
+
+    it("tells others you're typing, at most every two seconds, and when you post", async () => {
+      vi.mocked(postComment).mockResolvedValue({ comment: comment(9, ada, "Hey") });
+      await renderComments([], ada);
+      act(() => presence.join([ada, alan]));
+      const user = userEvent.setup();
+
+      await user.type(screen.getByLabelText("Add a comment"), "Hey");
+      expect(presence.whisper).toHaveBeenCalledOnce();
+      expect(presence.whisper).toHaveBeenCalledWith("typing", { typing: true });
+
+      await user.click(screen.getByRole("button", { name: "Comment" }));
+      await vi.waitFor(() => expect(presence.whisper).toHaveBeenLastCalledWith("typing", { typing: false }));
+      expect(presence.whisper).toHaveBeenCalledTimes(2);
+    });
+
+    it("tells others you stopped when you clear the draft", async () => {
+      await renderComments([], ada);
+      act(() => presence.join([ada, alan]));
+      const user = userEvent.setup();
+
+      await user.type(screen.getByLabelText("Add a comment"), "Hi");
+      await user.clear(screen.getByLabelText("Add a comment"));
+
+      expect(presence.whisper).toHaveBeenLastCalledWith("typing", { typing: false });
+    });
   });
 
   it("posts a comment and shows it once, even if its broadcast arrives too", async () => {
