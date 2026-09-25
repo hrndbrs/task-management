@@ -2,7 +2,10 @@
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Models\ChunkedUpload;
 use App\Models\Task;
+use App\Models\TaskAttachment;
+use App\Models\TaskComment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -198,6 +201,25 @@ describe('destroy', function () {
             ->assertNoContent();
 
         $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
+    });
+
+    it('removes the task\'s comments, attachments and unfinished uploads with it', function () {
+        $user = User::factory()->create();
+        $token = actingAsToken($user);
+        $task = Task::factory()->create(['created_by' => $user->id]);
+        $comment = TaskComment::factory()->for($task)->create();
+        $attachment = TaskAttachment::factory()->for($task)->create();
+        $upload = ChunkedUpload::factory()->for($task)->create();
+        $otherTasksComment = TaskComment::factory()->create();
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->deleteJson("/api/tasks/{$task->id}")
+            ->assertNoContent();
+
+        $this->assertModelMissing($comment);
+        $this->assertModelMissing($attachment);
+        $this->assertModelMissing($upload);
+        $this->assertModelExists($otherTasksComment);
     });
 
     it('forbids the assignee from deleting the task', function () {
