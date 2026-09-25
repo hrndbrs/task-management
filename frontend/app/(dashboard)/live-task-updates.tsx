@@ -1,29 +1,14 @@
 "use client";
 
-import { configureEcho, useEcho } from "@laravel/echo-react";
+import { useEcho } from "@laravel/echo-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { realtimeEnabled } from "@/lib/echo";
 
 const REFRESH_DELAY_MS = 300;
 
-const reverbKey = process.env.NEXT_PUBLIC_REVERB_APP_KEY;
-
-if (reverbKey) {
-  const port = Number(process.env.NEXT_PUBLIC_REVERB_PORT ?? 8081);
-  configureEcho({
-    broadcaster: "reverb",
-    key: reverbKey,
-    wsHost: process.env.NEXT_PUBLIC_REVERB_HOST ?? "localhost",
-    wsPort: port,
-    wssPort: port,
-    forceTLS: process.env.NEXT_PUBLIC_REVERB_SCHEME === "https",
-    enabledTransports: ["ws", "wss"],
-    authEndpoint: "/api/broadcasting/auth",
-  });
-}
-
 export function LiveTaskUpdates() {
-  return reverbKey ? <TaskChangeListener /> : null;
+  return realtimeEnabled ? <TaskChangeListener /> : null;
 }
 
 function TaskChangeListener() {
