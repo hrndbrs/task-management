@@ -40,6 +40,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store'])->name('tasks.attachments.store');
     Route::get('attachments/{attachment}/download', [TaskAttachmentController::class, 'download'])->name('attachments.download');
     Route::get('attachments/{attachment}/thumbnail', [TaskAttachmentController::class, 'thumbnail'])->name('attachments.thumbnail');
+    Route::get('attachments/{attachment}/stream/{path}', [TaskAttachmentController::class, 'stream'])
+        ->where('path', 'master\.m3u8|stream_\d+/(index\.m3u8|seg_\d+\.ts)')
+        ->name('attachments.stream');
     Route::delete('attachments/{attachment}', [TaskAttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     Route::get('attachments/{attachment}/versions', [AttachmentVersionController::class, 'index'])->name('attachments.versions.index');

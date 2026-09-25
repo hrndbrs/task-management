@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Contracts\VirusScanner;
 use App\Enums\ScanStatus;
+use App\Enums\StreamStatus;
 use App\Models\TaskAttachment;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -56,6 +57,9 @@ class ScanAttachmentForViruses implements ShouldQueue
 
         if ($this->attachment->isImage()) {
             GenerateAttachmentThumbnail::dispatch($this->attachment);
+        } elseif ($this->attachment->isVideo()) {
+            $this->attachment->update(['stream_status' => StreamStatus::Pending]);
+            ProcessVideoAttachment::dispatch($this->attachment);
         }
     }
 }

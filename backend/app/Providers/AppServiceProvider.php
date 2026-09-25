@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\VirusScanner;
 use App\Services\EicarVirusScanner;
+use App\Services\VideoTranscoder;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -17,6 +18,12 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(VirusScanner::class, EicarVirusScanner::class);
+
+        $this->app->bind(VideoTranscoder::class, fn () => new VideoTranscoder(
+            ffmpeg: config('attachments.video.ffmpeg'),
+            ffprobe: config('attachments.video.ffprobe'),
+            segmentSeconds: config('attachments.video.segment_seconds'),
+        ));
     }
 
     /**

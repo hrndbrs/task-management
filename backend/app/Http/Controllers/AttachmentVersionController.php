@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Actions\StoreAttachment;
 use App\Enums\ScanStatus;
+use App\Enums\StreamStatus;
 use App\Http\Requests\StoreAttachmentVersionRequest;
 use App\Http\Resources\TaskAttachmentResource;
 use App\Jobs\GenerateAttachmentThumbnail;
+use App\Jobs\ProcessVideoAttachment;
 use App\Models\TaskAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,10 +53,14 @@ class AttachmentVersionController extends Controller
         // The stored file is shared rather than copied: versions are only ever deleted together.
         $version = $storeAttachment->createVersion($attachment->task, $attachment->only([
             'file_name', 'file_path', 'thumbnail_path', 'file_size', 'mime_type', 'scan_status', 'scanned_at',
+            'stream_status', 'stream_path', 'duration',
         ]), $attachment->version_group);
 
         if ($version->isImage() && $version->thumbnail_path === null) {
             GenerateAttachmentThumbnail::dispatch($version);
+        } elseif ($version->isVideo() && $version->stream_status !== StreamStatus::Ready) {
+            $version->update(['stream_status' => StreamStatus::Pending]);
+            ProcessVideoAttachment::dispatch($version);
         }
 
         return TaskAttachmentResource::make($version)

@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\ScanStatus;
+use App\Enums\StreamStatus;
 use App\Jobs\GenerateAttachmentThumbnail;
+use App\Jobs\ProcessVideoAttachment;
 use App\Jobs\ScanAttachmentForViruses;
 use App\Models\TaskAttachment;
 use App\Services\EicarVirusScanner;
@@ -57,4 +59,22 @@ it('quarantines an infected file and does not generate a thumbnail', function ()
         ->and($attachment->scanned_at)->not->toBeNull();
     Storage::disk('local')->assertMissing('attachments/1/file');
     Queue::assertNotPushed(GenerateAttachmentThumbnail::class);
+});
+
+it('queues stream processing once a clean video is confirmed', function () {
+    $attachment = scannedAttachment('video bytes', 'video/mp4');
+
+    expect($attachment->stream_status)->toBe(StreamStatus::Pending);
+    Queue::assertPushed(
+        ProcessVideoAttachment::class,
+        fn (ProcessVideoAttachment $job) => $job->attachment->is($attachment),
+    );
+    Queue::assertNotPushed(GenerateAttachmentThumbnail::class);
+});
+
+it('does not process an infected video', function () {
+    $attachment = scannedAttachment('prefix '.EicarVirusScanner::signature(), 'video/mp4');
+
+    expect($attachment->stream_status)->toBeNull();
+    Queue::assertNotPushed(ProcessVideoAttachment::class);
 });

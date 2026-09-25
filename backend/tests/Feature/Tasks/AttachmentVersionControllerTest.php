@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\ScanStatus;
+use App\Jobs\ProcessVideoAttachment;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -123,6 +125,36 @@ describe('restore', function () {
 
         $restored = $this->actingAs($user, 'api')->get("/api/attachments/{$response->json('data.id')}/download");
         expect($restored->streamedContent())->toBe('version one');
+    });
+
+    it('reuses the stream of a restored video instead of processing it again', function () {
+        Queue::fake([ProcessVideoAttachment::class]);
+        $user = User::factory()->create();
+        $task = Task::factory()->create(['created_by' => $user->id]);
+        $video = TaskAttachment::factory()->streamReady()->for($task)->create();
+
+        $response = $this->actingAs($user, 'api')->postJson("/api/attachments/{$video->id}/restore");
+
+        $response->assertCreated()
+            ->assertJsonPath('data.stream_status', 'ready')
+            ->assertJsonPath('data.stream_url', route('attachments.stream', [$response->json('data.id'), 'master.m3u8']));
+        expect(TaskAttachment::find($response->json('data.id'))->stream_path)->toBe($video->stream_path);
+        Queue::assertNotPushed(ProcessVideoAttachment::class);
+    });
+
+    it('processes a restored video whose stream was never built', function () {
+        Queue::fake([ProcessVideoAttachment::class]);
+        $user = User::factory()->create();
+        $task = Task::factory()->create(['created_by' => $user->id]);
+        $video = TaskAttachment::factory()->video()->for($task)->create(['stream_status' => 'failed']);
+
+        $response = $this->actingAs($user, 'api')->postJson("/api/attachments/{$video->id}/restore");
+
+        $response->assertCreated()->assertJsonPath('data.stream_status', 'pending');
+        Queue::assertPushed(
+            ProcessVideoAttachment::class,
+            fn (ProcessVideoAttachment $job) => $job->attachment->id === $response->json('data.id'),
+        );
     });
 
     it('returns 409 when restoring a version that failed the virus scan', function () {

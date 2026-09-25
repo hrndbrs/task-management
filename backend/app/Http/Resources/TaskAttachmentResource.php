@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\StreamStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,9 @@ class TaskAttachmentResource extends JsonResource
             'download_url' => route('attachments.download', $this),
             'versions_url' => route('attachments.versions.index', $this),
             'thumbnail_url' => $this->thumbnail_path ? route('attachments.thumbnail', $this) : null,
+            'stream_status' => $this->stream_status,
+            'stream_url' => $this->stream_status === StreamStatus::Ready ? route('attachments.stream', [$this->resource, 'master.m3u8']) : null,
+            'duration' => $this->duration,
         ];
     }
 }

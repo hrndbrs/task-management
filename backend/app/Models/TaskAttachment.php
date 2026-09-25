@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ScanStatus;
+use App\Enums\StreamStatus;
 use Database\Factories\TaskAttachmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['task_id', 'version_group', 'version', 'file_name', 'file_path', 'thumbnail_path', 'file_size', 'mime_type', 'scan_status', 'scanned_at', 'uploaded_at'])]
+#[Fillable(['task_id', 'version_group', 'version', 'file_name', 'file_path', 'thumbnail_path', 'file_size', 'mime_type', 'scan_status', 'scanned_at', 'stream_status', 'stream_path', 'duration', 'uploaded_at'])]
 class TaskAttachment extends Model
 {
     /** @use HasFactory<TaskAttachmentFactory> */
@@ -34,6 +35,8 @@ class TaskAttachment extends Model
             'file_size' => 'integer',
             'scan_status' => ScanStatus::class,
             'scanned_at' => 'datetime',
+            'stream_status' => StreamStatus::class,
+            'duration' => 'float',
             'uploaded_at' => 'datetime',
         ];
     }
@@ -65,11 +68,26 @@ class TaskAttachment extends Model
         return str_starts_with($this->mime_type, 'image/');
     }
 
+    public function isVideo(): bool
+    {
+        return str_starts_with($this->mime_type, 'video/');
+    }
+
+    public function streamDirectory(): string
+    {
+        return "attachments/{$this->task_id}/streams/{$this->id}";
+    }
+
     /**
      * @return list<string>
      */
     public function storedPaths(): array
     {
         return array_values(array_filter([$this->file_path, $this->thumbnail_path]));
+    }
+
+    public function storedDirectories(): array
+    {
+        return array_values(array_filter([$this->stream_path]));
     }
 }

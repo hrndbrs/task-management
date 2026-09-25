@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ScanStatus;
+use App\Enums\StreamStatus;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -48,6 +49,23 @@ class TaskAttachmentFactory extends Factory
     /**
      * Indicate that the attachment failed the virus scan.
      */
+    public function video(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'file_name' => fake()->word().'.mp4',
+            'mime_type' => 'video/mp4',
+        ]);
+    }
+
+    public function streamReady(): static
+    {
+        return $this->video()->state(fn (array $attributes) => [
+            'stream_status' => StreamStatus::Ready,
+            'stream_path' => 'attachments/'.fake()->uuid().'/streams/1',
+            'duration' => 12.5,
+        ]);
+    }
+
     public function infected(): static
     {
         return $this->state(fn (array $attributes) => [

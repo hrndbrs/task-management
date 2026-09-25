@@ -16,6 +16,17 @@ return [
         'mp4', 'webm', 'mov',
     ],
 
+    'video' => [
+        'ffmpeg' => env('FFMPEG_BINARY', 'ffmpeg'),
+        'ffprobe' => env('FFPROBE_BINARY', 'ffprobe'),
+        'segment_seconds' => 4,
+        'renditions' => [
+            360 => 800,
+            720 => 2800,
+            1080 => 5000,
+        ],
+    ],
+
     'chunked' => [
         // Kilobytes. Must stay below PHP's post_max_size.
         'chunk_size' => (int) env('ATTACHMENTS_CHUNK_SIZE_KB', 5120),

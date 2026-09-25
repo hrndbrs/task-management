@@ -69,13 +69,16 @@ class TaskController extends Controller
 
         // Attachment and upload rows cascade in the DB, but their files must be removed explicitly.
         $paths = $task->attachments->flatMap->storedPaths()->all();
-        $chunkDirectories = $task->chunkedUploads->map->chunkDirectory()->all();
+        $directories = [
+            ...$task->attachments->flatMap->storedDirectories()->unique()->all(),
+            ...$task->chunkedUploads->map->chunkDirectory()->all(),
+        ];
 
         $task->delete();
 
         $disk = Storage::disk(config('attachments.disk'));
         $disk->delete($paths);
-        foreach ($chunkDirectories as $directory) {
+        foreach ($directories as $directory) {
             $disk->deleteDirectory($directory);
         }
 

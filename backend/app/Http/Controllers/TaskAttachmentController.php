@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\StoreAttachment;
 use App\Enums\ScanStatus;
+use App\Enums\StreamStatus;
 use App\Http\Requests\StoreTaskAttachmentRequest;
 use App\Http\Resources\TaskAttachmentResource;
 use App\Models\Task;
@@ -52,6 +53,23 @@ class TaskAttachmentController extends Controller
         return Storage::disk(config('attachments.disk'))->response($attachment->thumbnail_path);
     }
 
+    public function stream(TaskAttachment $attachment, string $path): StreamedResponse
+    {
+        Gate::authorize('view', $attachment->task);
+
+        abort_unless($attachment->stream_status === StreamStatus::Ready, 404);
+
+        $disk = Storage::disk(config('attachments.disk'));
+        $file = "{$attachment->stream_path}/{$path}";
+
+        abort_unless($disk->exists($file), 404);
+
+        return $disk->response($file, null, [
+            'Content-Type' => str_ends_with($path, '.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t',
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
+    }
+
     /**
      * Delete the file together with every one of its versions.
      */
@@ -62,9 +80,11 @@ class TaskAttachmentController extends Controller
         $versions = $attachment->versions()->get();
 
         $attachment->versions()->delete();
-        Storage::disk(config('attachments.disk'))->delete(
-            $versions->flatMap->storedPaths()->unique()->values()->all(),
-        );
+        $disk = Storage::disk(config('attachments.disk'));
+        $disk->delete($versions->flatMap->storedPaths()->unique()->values()->all());
+        foreach ($versions->flatMap->storedDirectories()->unique() as $directory) {
+            $disk->deleteDirectory($directory);
+        }
 
         return response()->noContent();
     }
