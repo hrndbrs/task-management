@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { flash } from "@/lib/flash";
 import { createSession, deleteSession } from "@/lib/session";
 
 export type LoginState =
@@ -55,6 +56,7 @@ export async function login(
 export async function logout() {
   await apiFetch("/auth/logout", { method: "POST" }).catch(() => null);
   await deleteSession();
+  await flash("You've been signed out");
 
   redirect("/login");
 }

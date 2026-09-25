@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+const toasts = (page: Page) => page.getByRole("region", { name: /^Notifications/ });
 
 test("lists tasks with pagination", async ({ page }) => {
   await page.goto("/");
@@ -35,13 +37,14 @@ test("creates, edits and deletes a task", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/tasks\/\d+$/);
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(toasts(page).getByText("Task created")).toBeVisible();
   const taskUrl = page.url();
 
   await page.getByLabel("Title").fill(`${title} (edited)`);
   await page.getByLabel("Status").selectOption("completed");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  await expect(page.getByRole("status")).toHaveText("Saved");
+  await expect(toasts(page).getByText("Changes saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: `${title} (edited)` })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Status")).toHaveValue("completed");
@@ -55,6 +58,7 @@ test("creates, edits and deletes a task", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText(title)).toHaveCount(0);
+  await expect(toasts(page).getByText("Task deleted")).toBeVisible();
 
   const response = await page.goto(taskUrl);
   expect(response?.status()).toBe(404);

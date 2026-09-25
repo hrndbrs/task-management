@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { deleteTask } from "@/app/actions/tasks";
 import { DeleteTaskButton } from "@/app/(dashboard)/tasks/[id]/delete-task-button";
 
 vi.mock("@/app/actions/tasks", () => ({ deleteTask: vi.fn() }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
 describe("DeleteTaskButton", () => {
   it("asks for confirmation before deleting", async () => {
@@ -47,7 +49,7 @@ describe("DeleteTaskButton", () => {
     await user.click(screen.getByRole("button", { name: "Delete task" }));
     await user.click(screen.getByRole("button", { name: "Yes, delete" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("You don't have permission to change this task.");
-    expect(screen.getByRole("button", { name: "Delete task" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Delete task" })).toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith("You don't have permission to change this task.");
   });
 });

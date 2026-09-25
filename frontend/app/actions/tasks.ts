@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { flash } from "@/lib/flash";
 
 const TASK_FIELDS = ["title", "description", "status", "priority", "assigned_user_id", "due_date"] as const;
 type TaskField = (typeof TASK_FIELDS)[number];
@@ -78,6 +79,7 @@ export async function createTask(
   if (!res.ok) return failure(res, formData);
 
   const { data } = await res.json();
+  await flash("Task created");
   redirect(`/tasks/${data.id}`);
 }
 
@@ -102,5 +104,6 @@ export async function deleteTask(id: number): Promise<TaskFormState> {
   if (!res) return unreachable();
   if (!res.ok) return failure(res);
 
+  await flash("Task deleted");
   redirect("/");
 }

@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { deleteTask } from "@/app/actions/tasks";
 
 export function DeleteTaskButton({ taskId }: { taskId: number }) {
   const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
 
   const confirmDelete = () =>
     startTransition(async () => {
       const result = await deleteTask(taskId);
       if (result?.message) {
-        setError(result.message);
+        toast.error(result.message);
         setConfirming(false);
       }
     });
@@ -42,19 +42,11 @@ export function DeleteTaskButton({ taskId }: { taskId: number }) {
       ) : (
         <button
           type="button"
-          onClick={() => {
-            setError(undefined);
-            setConfirming(true);
-          }}
+          onClick={() => setConfirming(true)}
           className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
         >
           Delete task
         </button>
-      )}
-      {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
       )}
     </div>
   );

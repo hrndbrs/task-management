@@ -27,6 +27,7 @@ test("returns to the requested page after sign-in and ends the session on logout
 
   await page.getByRole("button", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("region", { name: /^Notifications/ }).getByText("You've been signed out")).toBeVisible();
 
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);

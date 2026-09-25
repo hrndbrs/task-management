@@ -14,7 +14,10 @@ function taskForm(fields: Record<string, string>) {
 }
 
 describe("task actions", () => {
-  beforeEach(() => cookieJar.set("token", { value: "jwt" }));
+  beforeEach(() => {
+    cookieJar.clear();
+    cookieJar.set("token", { value: "jwt" });
+  });
 
   describe("createTask", () => {
     it("posts a normalized payload and opens the new task", async () => {
@@ -22,6 +25,7 @@ describe("task actions", () => {
       const form = taskForm({ title: "  Ship it  ", assigned_user_id: "3", priority: "high" });
 
       expect(await redirectOf(createTask(undefined, form))).toBe("/tasks/42");
+      expect(cookieJar.get("flash")?.value).toBe("Task created");
 
       const request = requestOf(fetchMock);
       expect(request.method).toBe("POST");
@@ -91,6 +95,7 @@ describe("task actions", () => {
       const fetchMock = mockFetch(new Response(null, { status: 204 }));
 
       expect(await redirectOf(deleteTask(7))).toBe("/");
+      expect(cookieJar.get("flash")?.value).toBe("Task deleted");
       expect(requestOf(fetchMock)).toMatchObject({ method: "DELETE", url: "http://localhost:8000/api/tasks/7" });
     });
 
@@ -98,6 +103,7 @@ describe("task actions", () => {
       mockFetch(json(404, { message: "Not found" }));
 
       expect((await deleteTask(7))?.message).toBe("This task no longer exists.");
+      expect(cookieJar.has("flash")).toBe(false);
     });
   });
 });

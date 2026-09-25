@@ -80,7 +80,10 @@ describe("login", () => {
 });
 
 describe("logout", () => {
-  beforeEach(() => cookieJar.set("token", { value: "jwt-old" }));
+  beforeEach(() => {
+    cookieJar.clear();
+    cookieJar.set("token", { value: "jwt-old" });
+  });
 
   it("invalidates the token on the API, clears the cookie and redirects to login", async () => {
     const fetchMock = mockFetch(json(200, { message: "Logged out successfully." }));
@@ -91,6 +94,10 @@ describe("logout", () => {
     expect(request.url).toBe("http://localhost:8000/api/auth/logout");
     expect(request.headers.get("Authorization")).toBe("Bearer jwt-old");
     expect(cookieJar.has("token")).toBe(false);
+    expect(cookieJar.get("flash")).toEqual({
+      value: "You've been signed out",
+      options: { sameSite: "lax", path: "/", maxAge: 60 },
+    });
   });
 
   it("still clears the cookie when the API is unreachable", async () => {

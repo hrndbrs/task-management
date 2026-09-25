@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import type { TaskFormState } from "@/app/actions/tasks";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/task-labels";
 import { TASK_PRIORITIES, TASK_STATUSES, type Task, type User } from "@/lib/types";
@@ -20,6 +21,10 @@ type Props = {
 
 export function TaskForm({ action, users, task, submitLabel, pendingLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
+
+  useEffect(() => {
+    if (state?.saved) toast.success("Changes saved", { id: "task-saved" });
+  }, [state]);
 
   const values = state?.values ?? {
     title: task?.title ?? "",
@@ -143,11 +148,6 @@ export function TaskForm({ action, users, task, submitLabel, pendingLabel }: Pro
           >
             Cancel
           </Link>
-        )}
-        {state?.saved && !pending && (
-          <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
-            Saved
-          </p>
         )}
       </div>
     </form>
