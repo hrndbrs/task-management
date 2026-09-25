@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { type TaskFilters, filterParams, parseTaskFilters } from "@/lib/task-filters";
 import type { Paginated, Task, User } from "@/lib/types";
 
 async function getJson<T>(path: string): Promise<T | null> {
@@ -13,8 +14,13 @@ async function getJson<T>(path: string): Promise<T | null> {
   return res.json();
 }
 
-export async function getTasks(page = 1): Promise<Paginated<Task>> {
-  const params = new URLSearchParams({ page: String(page), per_page: "15" });
+export async function getTasks(filters: TaskFilters = parseTaskFilters({})): Promise<Paginated<Task>> {
+  const params = filterParams(filters);
+  const [sort, direction] = filters.sort.split(":");
+  params.set("sort", sort);
+  params.set("direction", direction);
+  params.set("page", String(filters.page));
+  params.set("per_page", "15");
   return (await getJson<Paginated<Task>>(`/tasks?${params}`))!;
 }
 

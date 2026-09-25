@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { PriorityLabel, StatusBadge } from "@/components/task-badges";
+import { type TaskFilters, dashboardHref, hasActiveFilters, parseTaskFilters } from "@/lib/task-filters";
 import { formatDueDate, isOverdue } from "@/lib/task-labels";
-import { getTasks } from "@/lib/tasks";
+import { getTasks, getUsers } from "@/lib/tasks";
+import { TaskFilterBar } from "./task-filter-bar";
 
 export default async function DashboardPage({ searchParams }: PageProps<"/">) {
-  const { page } = await searchParams;
-  const currentPage = Math.max(1, Number(page) || 1);
-  const { data: tasks, meta } = await getTasks(currentPage);
+  const filters = parseTaskFilters(await searchParams);
+  const [{ data: tasks, meta }, users] = await Promise.all([getTasks(filters), getUsers()]);
+  const filtering = hasActiveFilters(filters);
 
   return (
     <div className="space-y-6">
@@ -17,6 +19,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             {meta.total} {meta.total === 1 ? "task" : "tasks"}
+            {filtering && (meta.total === 1 ? " matches your filters" : " match your filters")}
           </p>
         </div>
         <Link
@@ -27,12 +30,29 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         </Link>
       </div>
 
+      <TaskFilterBar filters={filters} users={users} />
+
       {tasks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 px-6 py-12 text-center dark:border-zinc-700">
-          <p className="font-medium text-zinc-900 dark:text-zinc-100">No tasks yet</p>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Create one to get started.
-          </p>
+          {filtering ? (
+            <>
+              <p className="font-medium text-zinc-900 dark:text-zinc-100">No matching tasks</p>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Try a different search or{" "}
+                <Link href={dashboardHref({ ...parseTaskFilters({}), sort: filters.sort })} className="font-medium underline underline-offset-2 hover:no-underline">
+                  clear the filters
+                </Link>
+                .
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-zinc-900 dark:text-zinc-100">No tasks yet</p>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Create one to get started.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <ul className="divide-y divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
@@ -69,13 +89,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 
       {meta.last_page > 1 && (
         <nav className="flex items-center justify-between text-sm" aria-label="Pagination">
-          <PageLink page={meta.current_page - 1} disabled={meta.current_page <= 1}>
+          <PageLink filters={filters} page={meta.current_page - 1} disabled={meta.current_page <= 1}>
             Previous
           </PageLink>
           <span className="text-zinc-600 dark:text-zinc-400">
             Page {meta.current_page} of {meta.last_page}
           </span>
-          <PageLink page={meta.current_page + 1} disabled={meta.current_page >= meta.last_page}>
+          <PageLink filters={filters} page={meta.current_page + 1} disabled={meta.current_page >= meta.last_page}>
             Next
           </PageLink>
         </nav>
@@ -85,10 +105,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 }
 
 function PageLink({
+  filters,
   page,
   disabled,
   children,
 }: {
+  filters: TaskFilters;
   page: number;
   disabled: boolean;
   children: React.ReactNode;
@@ -106,7 +128,7 @@ function PageLink({
 
   return (
     <Link
-      href={page === 1 ? "/" : `/?page=${page}`}
+      href={dashboardHref({ ...filters, page })}
       className={`${className} text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800`}
     >
       {children}
