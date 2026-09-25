@@ -2,6 +2,7 @@
 
 import { useEcho } from "@laravel/echo-react";
 import { useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { deleteComment, postComment } from "@/app/actions/comments";
 import { realtimeEnabled } from "@/lib/echo";
 import type { Comment, User } from "@/lib/types";
@@ -32,11 +33,21 @@ export function TaskComments({
     setComments((current) =>
       current.some((c) => c.id === comment.id) ? current : [...current, comment],
     );
+
+  const receive = (comment: Comment) => {
+    if (comment.user.id !== currentUser.id) {
+      toast(`${comment.user.name} commented`, {
+        id: `comment:${comment.id}`,
+        description: comment.comment.length > 120 ? `${comment.comment.slice(0, 120)}…` : comment.comment,
+      });
+    }
+    add(comment);
+  };
   const remove = (id: number) => setComments((current) => current.filter((c) => c.id !== id));
 
   return (
     <div className="space-y-4">
-      {realtimeEnabled && <CommentListener taskId={taskId} onPosted={add} onDeleted={remove} />}
+      {realtimeEnabled && <CommentListener taskId={taskId} onPosted={receive} onDeleted={remove} />}
 
       {comments.length === 0 ? (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">No comments yet.</p>
@@ -84,14 +95,12 @@ function CommentItem({
   canDelete: boolean;
   onDeleted: () => void;
 }) {
-  const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
 
   const remove = () =>
     startTransition(async () => {
-      setError(undefined);
       const result = await deleteComment(comment.id);
-      if (result.message) setError(result.message);
+      if (result.message) toast.error(result.message);
       else onDeleted();
     });
 
@@ -123,11 +132,6 @@ function CommentItem({
       <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-800 wrap-break-word dark:text-zinc-200">
         {comment.comment}
       </p>
-      {error && (
-        <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      )}
     </li>
   );
 }

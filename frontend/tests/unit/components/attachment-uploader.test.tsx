@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AttachmentUploader } from "@/app/(dashboard)/tasks/[id]/attachment-uploader";
 import { UploadAborted, UploadError, uploadAttachment } from "@/lib/upload";
@@ -7,6 +8,7 @@ import { UploadAborted, UploadError, uploadAttachment } from "@/lib/upload";
 const router = { refresh: vi.fn() };
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 vi.mock("@/lib/upload", async (importActual) => ({
   ...(await importActual<typeof import("@/lib/upload")>()),
   uploadAttachment: vi.fn(),
@@ -59,6 +61,7 @@ describe("AttachmentUploader", () => {
     expect(screen.queryByText("notes.txt")).not.toBeInTheDocument();
     expect(screen.getByText("photo.png")).toBeInTheDocument();
     expect(router.refresh).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("notes.txt uploaded");
   });
 
   it("uploads files picked with the browse button", async () => {

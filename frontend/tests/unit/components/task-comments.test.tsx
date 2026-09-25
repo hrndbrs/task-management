@@ -1,5 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteComment, postComment } from "@/app/actions/comments";
 import type { Comment, User } from "@/lib/types";
@@ -8,6 +9,7 @@ const echo = vi.hoisted(() => ({ configureEcho: vi.fn(), useEcho: vi.fn() }));
 
 vi.mock("@laravel/echo-react", () => echo);
 vi.mock("@/app/actions/comments", () => ({ postComment: vi.fn(), deleteComment: vi.fn() }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
 const ada: User = { id: 1, name: "Ada", email: "ada@example.com", role: "member" };
 const alan: User = { id: 2, name: "Alan", email: "alan@example.com", role: "member" };
@@ -81,6 +83,24 @@ describe("TaskComments", () => {
 
     expect(within(list()).getAllByRole("listitem")).toHaveLength(2);
     expect(within(list()).getByText("From Alan")).toBeInTheDocument();
+  });
+
+  it("announces a comment from someone else, but not your own", async () => {
+    await renderComments([], ada);
+
+    broadcast({ comment: comment(2, alan, "From Alan") });
+    broadcast({ comment: comment(3, ada, "From me") });
+
+    expect(toast).toHaveBeenCalledOnce();
+    expect(toast).toHaveBeenCalledWith("Alan commented", { id: "comment:2", description: "From Alan" });
+  });
+
+  it("shortens a long comment in its announcement", async () => {
+    await renderComments([], ada);
+
+    broadcast({ comment: comment(2, alan, "x".repeat(200)) });
+
+    expect(toast).toHaveBeenCalledWith("Alan commented", { id: "comment:2", description: `${"x".repeat(120)}…` });
   });
 
   it("removes comments deleted elsewhere", async () => {
@@ -159,7 +179,7 @@ describe("TaskComments", () => {
 
     await userEvent.setup().click(screen.getByRole("button", { name: "Delete comment by Ada" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("You can only delete your own comments.");
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("You can only delete your own comments."));
     expect(screen.getByText("Stays")).toBeInTheDocument();
   });
 });

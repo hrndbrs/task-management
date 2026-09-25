@@ -22,6 +22,7 @@ test("uploads a dropped file with progress, then deletes it", async ({ page }) =
   await expect(files.getByRole("progressbar", { name: "Uploading notes.txt" })).toBeVisible();
   await expect(files.getByText("notes.txt")).toBeVisible();
   await expect(files.getByRole("progressbar")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /^Notifications/ }).getByText("notes.txt uploaded")).toBeVisible();
   await expect(files.getByText("1.0 MB")).toBeVisible();
 
   await files.getByLabel("Upload files").setInputFiles({

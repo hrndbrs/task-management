@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   ALLOWED_EXTENSIONS,
   UploadAborted,
@@ -59,6 +60,7 @@ export function AttachmentUploader({ taskId }: { taskId: number }) {
         onProgress: (progress) => patch(id, { progress }),
       });
       remove(id);
+      toast.success(`${file.name} uploaded`);
       router.refresh();
     } catch (error) {
       if (error instanceof UploadAborted) remove(id);
