@@ -7,6 +7,8 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Task;
+use App\Models\User;
+use App\Notifications\TaskAssigned;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -38,6 +40,8 @@ class TaskController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        $this->notifyAssignee($task, $request->user());
+
         return TaskResource::make($task->load(['assignedUser', 'creator']))
             ->response()
             ->setStatusCode(201);
@@ -57,6 +61,10 @@ class TaskController extends Controller
     public function update(UpdateTaskRequest $request, Task $task): TaskResource
     {
         $task->update($request->validated());
+
+        if ($task->wasChanged('assigned_user_id')) {
+            $this->notifyAssignee($task, $request->user());
+        }
 
         return TaskResource::make($task->load(['assignedUser', 'creator']));
     }
@@ -78,5 +86,14 @@ class TaskController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    private function notifyAssignee(Task $task, User $assignedBy): void
+    {
+        if ($task->assigned_user_id === null || $task->assigned_user_id === $assignedBy->id) {
+            return;
+        }
+
+        $task->assignedUser->notify(new TaskAssigned($task, $assignedBy));
     }
 }
